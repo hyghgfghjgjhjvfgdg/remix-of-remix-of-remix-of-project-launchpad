@@ -25,6 +25,41 @@ export function rememberTx(id: string) {
     /* ignore */
   }
 }
+const PENDING_CARD = "mmx_pending_card_tx";
+const PENDING_CARD_MS = 6 * 60 * 60 * 1000;
+
+/**
+ * Card / Google Pay / Apple Pay transactions waiting for Whop's confirmation.
+ * Kept in the browser so the site keeps checking after the payment window is
+ * closed or the buyer was sent to Google/Apple and came back.
+ */
+export function pendingCardTxs(): string[] {
+  try {
+    const list = JSON.parse(localStorage.getItem(PENDING_CARD) ?? "[]") as { id: string; at: number }[];
+    return list.filter((x) => Date.now() - x.at < PENDING_CARD_MS).map((x) => x.id);
+  } catch {
+    return [];
+  }
+}
+export function rememberCardTx(id: string) {
+  try {
+    const list = (JSON.parse(localStorage.getItem(PENDING_CARD) ?? "[]") as { id: string; at: number }[])
+      .filter((x) => x.id !== id && Date.now() - x.at < PENDING_CARD_MS);
+    list.push({ id, at: Date.now() });
+    localStorage.setItem(PENDING_CARD, JSON.stringify(list.slice(-5)));
+  } catch {
+    /* ignore */
+  }
+}
+export function forgetCardTx(id: string) {
+  try {
+    const list = JSON.parse(localStorage.getItem(PENDING_CARD) ?? "[]") as { id: string; at: number }[];
+    localStorage.setItem(PENDING_CARD, JSON.stringify(list.filter((x) => x.id !== id)));
+  } catch {
+    /* ignore */
+  }
+}
+
 export function forgetTx() {
   try {
     localStorage.removeItem(LAST_TX);
@@ -328,9 +363,11 @@ export async function startCardSession(tx: Row, email?: string) {
       amount: Number(tx.amount),
       currency: String(tx.currency ?? CURRENCY_CODE).toUpperCase(),
       ...(email ? { email } : {}),
+      origin: window.location.origin,
     },
   });
   if (!res || !res.ok) throw new Error(res?.message || "Card payment could not start.");
+  rememberCardTx(String(tx.id));
   await fdb
     .from("luo_transactions")
     .update({ internal_reference: res.sessionId, used_at: nowIso() })
@@ -343,11 +380,19 @@ export async function syncCardPayment(txId: string): Promise<SyncResult> {
   const tx = await getTx(txId);
   if (!tx) return { status: "pending", message: "Waiting for confirmation" };
   const status = String(tx.status ?? "").toLowerCase();
-  if (status === "completed") return { status: "completed", message: "Payment confirmed" };
-  const res = await checkWhopPayment({ data: { txId } }).catch(() => null);
-  if (status === "failed") return { status: "failed", message: String(tx.note ?? "Payment failed") };
-  if (res?.failed) {
+  if (status === "completed") {
+    forgetCardTx(txId);
+    return { status: "completed", message: "Payment confirmed" };
+  }
+  const sessionId = tx.internal_reference ? String(tx.internal_reference) : undefined;
+  const res = await checkWhopPayment({ data: { txId, ...(sessionId ? { sessionId } : {}) } }).catch(() => null);
+  if (status === "failed" && !res?.paid) {
+    forgetCardTx(txId);
+    return { status: "failed", message: String(tx.note ?? "Payment failed") };
+  }
+  if (res?.failed && !res.paid) {
     await fdb.from("luo_transactions").update({ status: "failed", note: res.message }).eq("id", txId);
+    forgetCardTx(txId);
     return { status: "failed", message: res.message };
   }
   if (!res || res.paid !== true || !res.paymentId) return { status: "pending", message: "Complete the payment in the Whop tab" };
@@ -357,6 +402,7 @@ export async function syncCardPayment(txId: string): Promise<SyncResult> {
     .eq("id", txId);
   await activateSubscription(tx, "whop");
   forgetTx();
+  forgetCardTx(txId);
   return { status: "completed", message: "Payment confirmed" };
 }
 

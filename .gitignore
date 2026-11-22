@@ -30,3 +30,9 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
+
+# Android app build output
+mobile-app/.gradle/
+mobile-app/app/build/
+mobile-app/build/
+mobile-app/local.properties

@@ -110,9 +110,20 @@ export type WhopPayment = {
 /** Lists recent payments so we can find the one for a transaction. */
 export async function listWhopPayments(): Promise<WhopPayment[]> {
   const res = await whopCall<{ data?: WhopPayment[] }>(
-    `/payments?account_id=${paymentKey("WHOP_COMPANY_ID") ?? ""}&first=50`,
+    `/payments?account_id=${paymentKey("WHOP_COMPANY_ID") ?? ""}&first=100`,
   );
   return Array.isArray(res?.data) ? res.data : [];
+}
+
+/**
+ * A payment belongs to a transaction when Whop carried our tx id in its metadata,
+ * or when it references the checkout session we opened for it (Google Pay /
+ * Apple Pay and some card flows don't copy metadata onto the payment).
+ */
+export function whopPaymentMatches(p: WhopPayment, txId: string, sessionId?: string) {
+  if (p.metadata && String(p.metadata["tx_id"] ?? "") === txId) return true;
+  const raw = JSON.stringify(p);
+  return raw.includes(`"${txId}"`) || Boolean(sessionId && sessionId.length > 6 && raw.includes(sessionId));
 }
 
 export type WhopPaymentState = { state: "paid" | "failed" | "pending"; paymentId: string | null; message: string };
@@ -121,10 +132,8 @@ export type WhopPaymentState = { state: "paid" | "failed" | "pending"; paymentId
  * Strict verdict for a transaction: only status "paid" with a succeeded (or no)
  * substatus and no refund counts as paid. Anything else never activates.
  */
-export async function whopPaymentState(txId: string): Promise<WhopPaymentState> {
-  const mine = (await listWhopPayments()).filter(
-    (p) => p.metadata && String(p.metadata["tx_id"] ?? "") === txId,
-  );
+export async function whopPaymentState(txId: string, sessionId?: string): Promise<WhopPaymentState> {
+  const mine = (await listWhopPayments()).filter((p) => whopPaymentMatches(p, txId, sessionId));
   const ok = mine.find((p) => {
     const st = String(p.status ?? "").toLowerCase();
     const sub = String(p.substatus ?? "").toLowerCase();

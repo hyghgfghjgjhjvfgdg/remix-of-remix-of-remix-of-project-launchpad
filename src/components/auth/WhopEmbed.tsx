@@ -75,17 +75,20 @@ export default function WhopEmbed({
           <DialogHeader className="sr-only">
             <DialogTitle>Pay with card</DialogTitle>
           </DialogHeader>
-          <button
-            type="button"
-            aria-label="Close"
-            onClick={() => {
-              setOpen(false);
-              onDone?.();
-            }}
-            className="absolute right-2 top-2 z-10 grid size-8 place-items-center rounded-full bg-background/90 text-foreground shadow"
-          >
-            <X className="size-4" />
-          </button>
+          {/* Wrapped in a div: the dialog hides its own direct-child close button. */}
+          <div className="absolute right-2 top-2 z-20">
+            <button
+              type="button"
+              aria-label="Close card payment"
+              onClick={() => {
+                setOpen(false);
+                onDone?.();
+              }}
+              className="flex h-9 items-center gap-1.5 rounded-full bg-foreground px-3 text-xs font-bold text-background shadow-lg"
+            >
+              <X className="size-4" /> Exit
+            </button>
+          </div>
           {!loaded && (
             <div className="absolute inset-0 grid place-items-center">
               <Loader2 className="size-6 animate-spin opacity-60" />

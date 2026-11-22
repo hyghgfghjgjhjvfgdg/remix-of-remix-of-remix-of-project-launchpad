@@ -24,6 +24,7 @@ import { RouteProgress } from "@/components/youku/RouteProgress";
 import { AnnouncementBar } from "@/components/AnnouncementBar";
 import { ActivityTracker } from "@/components/ActivityTracker";
 import { PaymentKeepAlive } from "@/components/PaymentKeepAlive";
+import { CardPaymentWatcher } from "@/components/CardPaymentWatcher";
 import { UploadFloat } from "@/components/admin/UploadFloat";
 
 import { reportLovableError } from "../lib/lovable-error-reporting";
@@ -177,6 +178,7 @@ function RootComponent() {
           {/* Required: nested routes render here. Removing <Outlet /> breaks all child routes. */}
           <Outlet />
           <ReferralTracker />
+          <CardPaymentWatcher />
         </SubscriptionProvider>
       </AuthProvider>
       <DevToolsGuard />

@@ -115,6 +115,10 @@ function AdminPage() {
     return () => window.removeEventListener("keydown", onKey);
   }, []);
   const refreshAll = () => void qc.invalidateQueries();
+  // Keep the phone app pointed at whichever domain the admin is using.
+  useEffect(() => {
+    if (isAdmin) void import("@/lib/active-site").then((m) => m.syncActiveSite()).catch(() => undefined);
+  }, [isAdmin]);
 
   return (
     <div className="min-h-screen bg-background">

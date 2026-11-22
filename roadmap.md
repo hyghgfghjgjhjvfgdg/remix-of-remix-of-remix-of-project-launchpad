@@ -1,4 +1,8 @@
 # Roadmap
+- [x] Card payments: visible Exit button, background confirmation after closing/redirects, redirect to the live domain, session-based matching.
+- [x] Movie max Android app (downloads with pause/resume/cancel, watch offline, export to Movies/Movie max, offline banner, auto updates, active domain from Firebase, splash, icon); APK built and signed.
+- [ ] Test the app on a real phone (blocked: no Android device or emulator here).
+- [ ] Re-activate the Malaysian buyer's past payment is done manually by owner; confirm the next real card payment activates on its own (blocked: needs a live payment).
 - [x] Make MovieBox seeks reuse the signed file link, retry the relay, and have the player resume in place after failed loads/seeks (tested with simulated drops).
 - [ ] Confirm long-movie seeking on the redeployed site with a member account (blocked: needs redeploy and a signed-in member).
 - [ ] Limit dashboard to assigned main/team admins, redirect everyone else home, and remove admin claiming and automatic promotion.

@@ -15,6 +15,45 @@ import {
   type PlansSetting,
 } from "@/lib/admin";
 import { Panel, goldBtn, softField } from "./ui";
+import { ACTIVE_SITE_KEY, cleanSiteUrl } from "@/lib/active-site";
+
+/** Website address the phone app opens; filled automatically from the admin's domain. */
+function ActiveSitePanel() {
+  const qc = useQueryClient();
+  const siteQ = useQuery({ queryKey: ["active-site"], queryFn: () => getSetting<string>(ACTIVE_SITE_KEY, "") });
+  const [url, setUrl] = useState("");
+  useEffect(() => {
+    if (siteQ.data) setUrl(siteQ.data);
+  }, [siteQ.data]);
+  const save = useMutation({
+    mutationFn: async () => {
+      const clean = cleanSiteUrl(url);
+      if (!clean) throw new Error("Enter the full https:// address of the live website.");
+      await saveSetting(ACTIVE_SITE_KEY, clean);
+      setUrl(clean);
+    },
+    onSuccess: () => {
+      toast.success("Active website saved — the app switches on next open");
+      void qc.invalidateQueries({ queryKey: ["active-site"] });
+    },
+    onError: (e: Error) => toast.error(e.message),
+  });
+  return (
+    <Panel
+      title="Active website (phone app)"
+      action={
+        <button type="button" onClick={() => save.mutate()} disabled={save.isPending} className={`${goldBtn} inline-flex items-center gap-2`}>
+          <Save className="size-4" /> {save.isPending ? "Saving…" : "Save"}
+        </button>
+      }
+    >
+      <input className={softField} placeholder="https://your-domain.com" value={url} onChange={(e) => setUrl(e.target.value)} />
+      <p className="mt-2 text-[11px] opacity-55">
+        Saved automatically whenever an admin opens the dashboard on the live domain. The MOVIE MAX app always opens this address.
+      </p>
+    </Panel>
+  );
+}
 
 const DEFAULT_ENDPOINTS: EndpointsSetting = {
   payment_backend_url: "",
@@ -65,6 +104,7 @@ export function SettingsTab() {
 
   return (
     <div className="space-y-3">
+      <ActiveSitePanel />
       <MovieRelayPanel />
       <ApiTokenPanel />
       <Panel

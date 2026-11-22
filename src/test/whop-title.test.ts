@@ -9,3 +9,18 @@ describe("whopTitle", () => {
     expect(whopTitle("SVIP Member Quarterly Super Long Name Here").length).toBeLessThanOrEqual(30);
   });
 });
+
+import { whopPaymentMatches } from "@/lib/whop.server";
+
+describe("matching a Whop payment to its transaction", () => {
+  it("matches by tx id in metadata", () => {
+    expect(whopPaymentMatches({ id: "p1", metadata: { tx_id: "tx123" } }, "tx123")).toBe(true);
+  });
+  it("matches Google/Apple Pay payments that only reference the checkout session", () => {
+    const p = { id: "p2", metadata: null, checkout_configuration: { id: "ch_ABC123XYZ" } } as never;
+    expect(whopPaymentMatches(p, "tx999", "ch_ABC123XYZ")).toBe(true);
+  });
+  it("does not match another buyer's payment", () => {
+    expect(whopPaymentMatches({ id: "p3", metadata: { tx_id: "other" } }, "tx123", "ch_ABC123XYZ")).toBe(false);
+  });
+});
