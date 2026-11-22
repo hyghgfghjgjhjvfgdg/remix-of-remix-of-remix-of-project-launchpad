@@ -1,0 +1,89 @@
+{
+  "source": "code-archive (luofilmpaul345890867-main.zip, a Lovable TanStack Start project)",
+  "capabilities": [
+    {
+      "capability": "code",
+      "source": "full TanStack Start app (routes, components, lib, tests)",
+      "outcome": "imported as-is",
+      "status": "verified",
+      "next_action": "none; build OK, 107 tests pass, home/music/plans load with live catalog"
+    },
+    {
+      "capability": "assets",
+      "source": "public/ and src/assets/",
+      "outcome": "imported",
+      "status": "imported",
+      "next_action": "APK pointer (MovieMax-TV.apk) belongs to the old project's asset store; re-upload the APK if the download link fails"
+    },
+    {
+      "capability": "database",
+      "source": "Firebase Firestore (client SDK + REST)",
+      "outcome": "kept on Firebase pending owner decision; Firestore is a deliberate choice recorded in the project's rules",
+      "status": "pending_user_decision",
+      "next_action": "ask owner whether to move data to Lovable Cloud"
+    },
+    {
+      "capability": "auth",
+      "source": "Firebase Auth (email, Google One Tap, phone)",
+      "outcome": "kept on Firebase pending owner decision",
+      "status": "pending_user_decision",
+      "next_action": "ask owner whether to move users to Lovable Cloud"
+    },
+    {
+      "capability": "records",
+      "source": "Firestore collections",
+      "outcome": "live in the owner's Firebase project; no export attached",
+      "status": "pending",
+      "next_action": "only needed if moving to Lovable Cloud"
+    },
+    {
+      "capability": "payments",
+      "source": "PayPal, Whop, pawaPay, Relworx backend",
+      "outcome": "preserved; keys live in server-only code per project rule",
+      "status": "imported",
+      "next_action": "verify a checkout opens"
+    },
+    {
+      "capability": "file storage",
+      "source": "Cloudflare R2 via external r2upload Worker",
+      "outcome": "preserved",
+      "status": "imported",
+      "next_action": "none"
+    },
+    {
+      "capability": "public endpoints",
+      "source": "/api/public/* (movie, stream, subtitle, song, admin-upload, v1 API), sitemaps",
+      "outcome": "preserved",
+      "status": "imported",
+      "next_action": "spot-check after publishing"
+    },
+    {
+      "capability": "AI",
+      "source": "/api/doc-chat (Lovable AI gateway or Pollinations fallback)",
+      "outcome": "preserved",
+      "status": "imported",
+      "next_action": "none"
+    },
+    {
+      "capability": "external relays",
+      "source": "railway-relay/, docs/moviebox-relay/ (deployed separately)",
+      "outcome": "kept as source files",
+      "status": "imported",
+      "next_action": "none"
+    },
+    {
+      "capability": "schedules",
+      "source": "none (crons: [])",
+      "outcome": "none",
+      "status": "verified",
+      "next_action": "none"
+    },
+    {
+      "capability": "secrets",
+      "source": "only optional overrides; keys are in code by owner choice",
+      "outcome": "nothing to request",
+      "status": "verified",
+      "next_action": "none"
+    }
+  ]
+}
