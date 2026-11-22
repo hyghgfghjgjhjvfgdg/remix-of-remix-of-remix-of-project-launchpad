@@ -1,4 +1,6 @@
 # Roadmap
+- [x] Make MovieBox seeks reuse the signed file link, retry the relay, and have the player resume in place after failed loads/seeks (tested with simulated drops).
+- [ ] Confirm long-movie seeking on the redeployed site with a member account (blocked: needs redeploy and a signed-in member).
 - [ ] Limit dashboard to assigned main/team admins, redirect everyone else home, and remove admin claiming and automatic promotion.
 - [x] Switch upload service, tune parallel transfers, preserve upload drafts across navigation, and add a corner progress window with View/Edit and publishing; signing works and continuity tests pass.
 - [ ] Verify a real admin upload, navigation, and publication end-to-end (blocked: no authenticated Firebase admin session available).

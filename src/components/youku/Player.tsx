@@ -5,9 +5,15 @@
  * Luo/Luganda titles.
  */
 import { useEffect, useRef, useState } from "react";
-import { AlertTriangle } from "lucide-react";
+import { AlertTriangle, RotateCcw } from "lucide-react";
 import watermarkUrl from "@/assets/luofilm-mark.png";
 import { isHlsUrl } from "@/lib/download";
+import {
+  STALL_TIMEOUT_MS,
+  hasRecovered,
+  recoveryStep,
+  resumePosition,
+} from "@/lib/playback-recovery";
 
 export type Subtitle = { label: string; src: string };
 
@@ -106,6 +112,9 @@ export function Player({
   latestSrc.current = src;
   const hasSource = Boolean(src);
   const [playbackError, setPlaybackError] = useState<string | null>(null);
+  /** Viewer position and intent, kept across reloads so a failed seek resumes in place. */
+  const recovery = useRef({ failures: 0, resumeAt: 0, restoredAt: 0, wantPlay: false, recovering: false });
+  const retryRef = useRef<(() => void) | null>(null);
   // Latest callbacks, so recreating the player is only driven by the source.
   const handlers = useRef({ onQualityChange, onDirectError, onNext, onTheater });
   handlers.current = { onQualityChange, onDirectError, onNext, onTheater };
@@ -121,6 +130,11 @@ export function Player({
       if (disposed || !containerRef.current) return;
 
       const type = kind ?? (isHlsUrl(src) ? "m3u8" : "mp4");
+      // ArtPlayer reloads the file itself after an error; our handler below decides
+      // where to resume and when to stop, so allow it enough attempts.
+      (Artplayer as any).RECONNECT_TIME_MAX = 10;
+      (Artplayer as any).RECONNECT_SLEEP_TIME = 1200;
+      recovery.current = { failures: 0, resumeAt: 0, restoredAt: 0, wantPlay: false, recovering: false };
       const theme = getComputedStyle(document.documentElement).getPropertyValue("--hot").trim();
 
       const settings: any[] = [];
@@ -271,13 +285,100 @@ export function Player({
         },
       });
 
-      art.on("error", (error: unknown) => {
-        const switched = handlers.current.onDirectError?.();
-        if (!switched)
-          setPlaybackError(
-            error instanceof Error ? error.message : "This source could not be played.",
-          );
-      });
+      if (type === "m3u8") {
+        art.on("error", (error: unknown) => {
+          const switched = handlers.current.onDirectError?.();
+          if (!switched)
+            setPlaybackError(
+              error instanceof Error ? error.message : "This source could not be played.",
+            );
+        });
+      } else {
+        const rec = recovery.current;
+        const video: HTMLVideoElement = art.video;
+        let stallTimer: ReturnType<typeof setTimeout> | null = null;
+        const clearStall = () => {
+          if (stallTimer) clearTimeout(stallTimer);
+          stallTimer = null;
+        };
+        // After the file reloads, jump back to the viewer's spot and continue.
+        const restoreAfterReload = () => {
+          rec.recovering = true;
+          const target = rec.resumeAt;
+          art.once("video:loadedmetadata", () => {
+            const at = resumePosition(target, video.duration);
+            if (at > 0) video.currentTime = at;
+          });
+          art.once("video:canplay", () => {
+            rec.recovering = false;
+            rec.restoredAt = target;
+            if (rec.wantPlay) void video.play().catch(() => {});
+          });
+        };
+        const fail = () => {
+          rec.failures += 1;
+          const step = recoveryStep(rec.failures);
+          if (step === "give-up") {
+            clearStall();
+            rec.recovering = false;
+            art.pause();
+            setPlaybackError("The connection to this video kept dropping.");
+            return false;
+          }
+          if (step === "switch" && handlers.current.onDirectError?.()) {
+            // The source effect switches quality and resumes from rec.resumeAt.
+            rec.recovering = true;
+            return true;
+          }
+          restoreAfterReload();
+          return true;
+        };
+        const reloadHere = () => {
+          restoreAfterReload();
+          video.load();
+        };
+        retryRef.current = () => {
+          rec.failures = 0;
+          rec.wantPlay = true;
+          setPlaybackError(null);
+          reloadHere();
+        };
+        // ArtPlayer has already reloaded the file when it emits "error".
+        art.on("error", () => {
+          fail();
+        });
+        art.on("video:seeking", () => {
+          if (!rec.recovering) rec.resumeAt = video.currentTime;
+        });
+        art.on("video:timeupdate", () => {
+          if (rec.recovering || video.seeking) return;
+          rec.resumeAt = video.currentTime;
+          if (rec.failures && hasRecovered(video.currentTime, rec.restoredAt)) rec.failures = 0;
+          clearStall();
+        });
+        art.on("video:play", () => {
+          if (!rec.recovering) rec.wantPlay = true;
+        });
+        art.on("video:pause", () => {
+          if (!rec.recovering && !video.error) rec.wantPlay = false;
+          clearStall();
+        });
+        art.on("video:playing", () => {
+          clearStall();
+          setPlaybackError(null);
+        });
+        art.on("video:canplay", clearStall);
+        // A seek that never answers shows an endless spinner without an error event.
+        art.on("video:waiting", () => {
+          clearStall();
+          stallTimer = setTimeout(() => {
+            stallTimer = null;
+            if (disposed || rec.recovering || !rec.wantPlay || video.readyState >= 3) return;
+            if (fail()) video.load();
+          }, STALL_TIMEOUT_MS);
+        });
+        art.on("destroy", clearStall);
+      }
 
       artRef.current = art;
       art.title = title ?? "";
@@ -285,6 +386,7 @@ export function Player({
 
     return () => {
       disposed = true;
+      retryRef.current = null;
       const player = artRef.current;
       artRef.current = null;
       if (player) {
@@ -300,16 +402,24 @@ export function Player({
   useEffect(() => {
     const art = artRef.current;
     if (!art || !src || art.url === src) return;
-    const playing = !art.video.paused;
-    const time = art.video.currentTime;
+    const rec = recovery.current;
+    // During recovery the element was just reloaded (time 0), so use the saved spot.
+    const playing = rec.recovering ? rec.wantPlay : !art.video.paused;
+    const time = rec.recovering ? rec.resumeAt : art.video.currentTime;
     const rate = art.video.playbackRate;
+    rec.recovering = true;
     void art.switchQuality(src).then(() => {
       if (artRef.current !== art || latestSrc.current !== src) return;
-      art.video.currentTime = time;
+      const at = resumePosition(time, art.video.duration);
+      if (at > 0) art.video.currentTime = at;
       art.video.playbackRate = rate;
+      rec.recovering = false;
+      rec.restoredAt = time;
       if (playing) void art.video.play().catch(() => {});
     }).catch(() => {
-      if (artRef.current === art) handlers.current.onDirectError?.();
+      // ArtPlayer reloads the new file and emits "error"; the recovery handler takes over.
+      rec.resumeAt = time;
+      rec.wantPlay = playing;
     });
   }, [src]);
 
@@ -345,11 +455,20 @@ export function Player({
         className="size-full"
       />
       {playbackError && (
-        <div className="absolute inset-0 z-30 grid place-items-center bg-black/90 px-6 text-center">
+        <div className="absolute inset-0 z-[150] grid place-items-center bg-black/90 px-6 text-center">
           <div className="max-w-md">
             <AlertTriangle className="mx-auto size-8 text-vip" />
-            <p className="mt-3 text-sm font-semibold text-foreground">Video format not supported</p>
+            <p className="mt-3 text-sm font-semibold text-foreground">This video couldn't load</p>
             <p className="mt-1 text-xs leading-5 text-muted-foreground">{playbackError}</p>
+            {retryRef.current && (
+              <button
+                type="button"
+                onClick={() => retryRef.current?.()}
+                className="mt-4 inline-flex items-center gap-2 rounded-full bg-primary px-4 py-2 text-xs font-semibold text-primary-foreground transition-opacity hover:opacity-90"
+              >
+                <RotateCcw className="size-4" /> Try again
+              </button>
+            )}
           </div>
         </div>
       )}

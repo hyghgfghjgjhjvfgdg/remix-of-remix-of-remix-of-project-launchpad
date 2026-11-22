@@ -3,7 +3,13 @@ import { fetchFreshSources, fetchSources, getMediaDomain } from "@/lib/moviebox"
 import { getMovieRelay, relayRequestUrl } from "@/lib/movie-relay";
 import { z } from "zod";
 import { isWorkerd, socketStream } from "@/lib/socket-fetch";
-import { exactMovieSource, movieRequestRange, validMovieContentRange } from "@/lib/movie-relay-rules";
+import {
+  exactMovieSource,
+  movieRequestRange,
+  movieSourceHint,
+  needsFreshMovieUrl,
+  validMovieContentRange,
+} from "@/lib/movie-relay-rules";
 
 /**
  * Stable relay for full website MP4 files. It resolves a fresh signed URL for
@@ -32,10 +38,49 @@ const querySchema = z.object({
   dl: z.string().max(120).nullish(),
   probe: z.string().max(10).nullish(),
   diag: z.string().max(10).nullish(),
+  /** Signed file URL the player already has; skips re-resolving on every seek. */
+  src: z.string().max(2000).nullish(),
 });
 
+type MovieFile = { id: string; url: string; bytes: number };
+
+/**
+ * Exact-resource signed URLs resolved by this server instance. Seeks fire a new
+ * Range request each time; reusing the URL avoids hitting MovieBox's API (and its
+ * rate limits) per seek. Entries are dropped the moment the CDN refuses them.
+ */
+const fileCache = new Map<string, { file: MovieFile; at: number }>();
+const FILE_CACHE_MS = 10 * 60 * 1000;
+const cacheKey = (subjectId: string, se: number, ep: number, resourceId: string) =>
+  `${subjectId}:${se}:${ep}:${resourceId}`;
+function rememberFile(key: string, file: MovieFile) {
+  fileCache.set(key, { file, at: Date.now() });
+  if (fileCache.size > 300) {
+    const first = fileCache.keys().next().value;
+    if (first) fileCache.delete(first);
+  }
+}
+function cachedFile(key: string) {
+  const hit = fileCache.get(key);
+  if (!hit) return null;
+  if (Date.now() - hit.at > FILE_CACHE_MS) {
+    fileCache.delete(key);
+    return null;
+  }
+  return hit.file;
+}
+
+/** Media domain for the Referer, without letting a slow API call stall playback. */
+async function mediaRefererDomain() {
+  const fallback = "https://mzfi.me";
+  return Promise.race([
+    getMediaDomain().catch(() => fallback),
+    new Promise<string>((resolve) => setTimeout(() => resolve(fallback), 1500)),
+  ]);
+}
+
 /** Bumped on every relay change so a deployed site can be checked with ?diag=1. */
-const RELAY_VERSION = "relay-3";
+const RELAY_VERSION = "relay-4";
 
 const errorResponse = (message: string, status: number) =>
   new Response(message, { status, headers: corsHeaders });
@@ -53,13 +98,27 @@ export const Route = createFileRoute("/api/public/movie")({
         const probe = parsed.data.probe !== null && parsed.data.probe !== undefined;
         const filename = safeName(requestedName ?? "movie.mp4");
 
-        const selectSource = (items: Awaited<ReturnType<typeof fetchSources>>) =>
-          exactMovieSource(items, resourceId);
-        const [sources, domain] = await Promise.all([
-          fetchSources(subjectId, se, ep, detailPath).catch(() => []),
-          getMediaDomain(),
+        const key = cacheKey(subjectId, se, ep, resourceId);
+        const toFile = (items: Awaited<ReturnType<typeof fetchSources>>): MovieFile | null => {
+          const found = exactMovieSource(items, resourceId);
+          if (!found) return null;
+          const file = { id: found.id, url: found.url, bytes: found.bytes };
+          rememberFile(key, file);
+          return file;
+        };
+        const hint = movieSourceHint(parsed.data.src);
+        let source: MovieFile | null = cachedFile(key) ?? (hint ? { id: resourceId, url: hint, bytes: 0 } : null);
+        const [listed, domain] = await Promise.all([
+          source ? Promise.resolve(null) : fetchSources(subjectId, se, ep, detailPath).catch(() => []),
+          mediaRefererDomain(),
         ]);
-        let source = selectSource(sources);
+        if (!source && listed) {
+          source = toFile(listed);
+        }
+        if (!source) {
+          // One more attempt with a fresh list: MovieBox's API sometimes answers empty.
+          source = toFile(await fetchFreshSources(subjectId, se, ep, detailPath).catch(() => []));
+        }
         if (!source) return errorResponse("Full movie file is unavailable", 404);
 
         // Website stream metadata includes the full file size. Return it immediately so
@@ -105,13 +164,19 @@ export const Route = createFileRoute("/api/public/movie")({
           // Cloudflare deployment pulls the bytes through the outside relay.
           const relay = await getMovieRelay();
           if (relay) {
-            const viaRelay = await fetch(
-              relayRequestUrl(relay, url),
-              { headers: mediaHeaders(), signal: request.signal },
-            ).catch(() => null);
-            attempts.push(`relay:${viaRelay?.status ?? "error"}`);
-            if (viaRelay && (viaRelay.ok || viaRelay.status === 416)) return viaRelay;
-            await viaRelay?.body?.cancel().catch(() => undefined);
+            // Retry once: the relay host occasionally drops a connection mid-seek.
+            for (let attempt = 0; attempt < 2; attempt += 1) {
+              const viaRelay = await fetch(
+                relayRequestUrl(relay, url),
+                { headers: mediaHeaders(), signal: request.signal },
+              ).catch(() => null);
+              attempts.push(`relay:${viaRelay?.status ?? "error"}`);
+              if (viaRelay && (viaRelay.ok || viaRelay.status === 416)) return viaRelay;
+              // The file server's own refusal (expired link) is final; fetch a fresh link instead.
+              if (viaRelay && viaRelay.status < 500) return viaRelay;
+              await viaRelay?.body?.cancel().catch(() => undefined);
+              if (request.signal.aborted) return null;
+            }
           }
           const viaSocket = await socketStream(url, mediaHeaders(), request.signal).catch((e: unknown) => {
             attempts.push(`socket-error:${e instanceof Error ? e.message : String(e)}`);
@@ -143,14 +208,15 @@ export const Route = createFileRoute("/api/public/movie")({
         if (request.signal.aborted) return errorResponse("Media request cancelled", 499);
         // A signed CDN URL may expire during a long range download. Refresh
         // play-info once and retry the exact same range against the same file.
-        if (!upstream || [401, 403, 404, 410, 429].includes(upstream.status)) {
+        if (needsFreshMovieUrl(upstream?.status)) {
           await upstream?.body?.cancel();
-          const freshSources = await fetchFreshSources(subjectId, se, ep, detailPath).catch(() => []);
-          const fresh = selectSource(freshSources);
+          fileCache.delete(key);
+          const fresh = toFile(await fetchFreshSources(subjectId, se, ep, detailPath).catch(() => []));
           if (!fresh) return errorResponse("This movie file is no longer available", 404);
           source = fresh;
           upstream = await safeFetch(source.url);
         }
+        if (upstream && needsFreshMovieUrl(upstream.status)) fileCache.delete(key);
         if (upstream?.status === 416) {
           const headers = new Headers(corsHeaders);
           const contentRange = upstream.headers.get("content-range");

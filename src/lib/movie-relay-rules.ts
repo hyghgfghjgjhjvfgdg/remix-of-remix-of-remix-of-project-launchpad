@@ -16,3 +16,26 @@ export function validMovieContentRange(value: string | null) {
   const total = Number(match[3]);
   return [start, end, total].every(Number.isSafeInteger) && start <= end && end < total;
 }
+/** Only MovieBox's own signed file hosts may be passed in as a playback hint. */
+const MEDIA_HOST = /(^|\.)(hakunaymatata\.com|aoneroom\.com)$/;
+
+/**
+ * Signed file URL the player already holds. Using it lets every seek go straight
+ * to the file instead of asking MovieBox for the source list again.
+ */
+export function movieSourceHint(value: string | null | undefined): string | null {
+  if (!value) return null;
+  try {
+    const url = new URL(value);
+    if (url.protocol !== "https:" || !MEDIA_HOST.test(url.hostname)) return null;
+    if (!/\.mp4$/i.test(url.pathname)) return null;
+    return url.toString();
+  } catch {
+    return null;
+  }
+}
+
+/** Upstream answers that mean the signed link expired or was refused: resolve a fresh one. */
+export function needsFreshMovieUrl(status: number | null | undefined) {
+  return status == null || [401, 403, 404, 410, 429].includes(status);
+}

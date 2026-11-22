@@ -21,3 +21,24 @@ describe("Full MovieBox playback and downloads", () => {
     expect(validMovieContentRange(null)).toBe(false);
   });
 });
+import { movieSourceHint, needsFreshMovieUrl } from "@/lib/movie-relay-rules";
+
+describe("signed file link passed by the player", () => {
+  it("accepts MovieBox's own signed MP4 links", () => {
+    const url = "https://bcdnxw.hakunaymatata.com/bt/abc.mp4?sign=x&t=1";
+    expect(movieSourceHint(url)).toBe(url);
+  });
+  it("rejects other hosts, plain http and non-video paths", () => {
+    expect(movieSourceHint("https://evil.example.com/a.mp4")).toBeNull();
+    expect(movieSourceHint("http://bcdnxw.hakunaymatata.com/a.mp4")).toBeNull();
+    expect(movieSourceHint("https://bcdnxw.hakunaymatata.com/a.html")).toBeNull();
+    expect(movieSourceHint("https://hakunaymatata.com.evil.io/a.mp4")).toBeNull();
+    expect(movieSourceHint(null)).toBeNull();
+  });
+  it("fetches a fresh link when the file server refuses or the request fails", () => {
+    for (const status of [401, 403, 404, 410, 429]) expect(needsFreshMovieUrl(status)).toBe(true);
+    expect(needsFreshMovieUrl(null)).toBe(true);
+    expect(needsFreshMovieUrl(206)).toBe(false);
+    expect(needsFreshMovieUrl(416)).toBe(false);
+  });
+});

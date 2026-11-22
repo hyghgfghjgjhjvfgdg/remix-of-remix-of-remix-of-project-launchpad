@@ -219,8 +219,21 @@ function WatchPage() {
     src: subtitleUrl(c.url),
   }));
 
+  // Keep the first signed link per file so a background refetch never reloads the player.
+  const fileHints = useRef(new Map<string, string>());
+  const hintKey = active ? `${playId}:${season}:${episode}:${active.id}` : "";
+  if (active?.url && !fileHints.current.has(hintKey)) fileHints.current.set(hintKey, active.url);
   const playSrc = active
-    ? catalogMediaUrl(playId, season, episode, active.id, active.resolution, undefined, getDetailPath(playId))
+    ? catalogMediaUrl(
+        playId,
+        season,
+        episode,
+        active.id,
+        active.resolution,
+        undefined,
+        getDetailPath(playId),
+        fileHints.current.get(hintKey),
+      )
     : null;
   const loadingStream = sources.isPending;
 

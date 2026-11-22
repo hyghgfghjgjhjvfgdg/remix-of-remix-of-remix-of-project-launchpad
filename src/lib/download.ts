@@ -92,6 +92,8 @@ export function catalogMediaUrl(
   resolution: number,
   filename?: string,
   detailPath?: string,
+  /** Signed file link already known to the browser; lets seeks skip re-resolving. */
+  fileUrl?: string,
 ) {
   const params = new URLSearchParams({
     subjectId,
@@ -102,6 +104,7 @@ export function catalogMediaUrl(
   });
   if (filename) params.set("dl", `${slug(filename)}.mp4`);
   if (detailPath) params.set("detailPath", detailPath);
+  if (fileUrl) params.set("src", fileUrl);
   return `/api/public/movie?${params.toString()}`;
 }
 
