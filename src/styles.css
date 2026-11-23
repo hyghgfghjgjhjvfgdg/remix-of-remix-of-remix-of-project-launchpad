@@ -72,6 +72,10 @@
   --color-tvpromo-accent: var(--tvpromo-accent);
   --color-tvpromo-accent-foreground: var(--tvpromo-accent-foreground);
   --color-livetv-foreground: var(--livetv-foreground);
+  --color-app-accent: var(--app-accent);
+  --color-app-accent-foreground: var(--app-accent-foreground);
+  --color-app-bar: var(--app-bar);
+  --color-app-hot: var(--app-hot);
   --color-vip: var(--vip);
   --color-vip-foreground: var(--vip-foreground);
   --color-hot: var(--hot);
@@ -135,6 +139,13 @@
   --devnav: oklch(0.7 0.15 185);
   --devnav-foreground: oklch(0.99 0 0);
   --livetv: oklch(0.6 0.22 25);
+  /* Movie max Android app (MovieBox-style shell) */
+  --app-accent: oklch(0.84 0.18 158);
+  --app-accent-foreground: oklch(0.16 0.02 250);
+  --app-accent-2: oklch(0.72 0.15 232);
+  --app-bar: oklch(0.2 0.01 260);
+  --app-hot: oklch(0.63 0.22 25);
+  --gradient-app: linear-gradient(90deg, var(--app-accent-2), var(--app-accent));
   --tvpromo: oklch(0.62 0.16 240);
   --tvpromo-foreground: oklch(0.99 0 0);
   --tvpromo-accent: oklch(0.8 0.16 70);
@@ -748,3 +759,9 @@
 
 .tv-promo-timer { animation: wa-exit-bar 9000ms linear forwards; }
 @media (prefers-reduced-motion: reduce) { .tv-promo-timer { animation: none; } }
+
+/* Movie max Android app shell: two-row header (brand + search, category tabs). */
+.app-gradient { background-image: var(--gradient-app); }
+@media (max-width: 1023px) {
+  html.native-app body { padding-top: 40px; }
+}

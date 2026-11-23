@@ -10,10 +10,17 @@ import tvIconSrc from "@/assets/tv.svg";
 import musicIconSrc from "@/assets/music.svg";
 import { AuthModal } from "@/components/auth/AuthModal";
 import { useAuth } from "@/hooks/useAuth";
+import { useNativeApp } from "@/hooks/useNativeApp";
+import { AppBottomNav } from "./AppShell";
 import { listAllEpisodes, listLuoTitles, type LuoLanguage } from "@/lib/luo";
 
 /** Classic flat bottom bar (7 tabs) matching the desktop sidebar's dark style and bundled icons. Mobile only. */
 export function MobileNav() {
+  const native = useNativeApp();
+  return native ? <AppBottomNav /> : <WebMobileNav />;
+}
+
+function WebMobileNav() {
   const pathname = useRouterState({ select: (s) => s.location.pathname });
   const { user } = useAuth();
   const [authOpen, setAuthOpen] = useState(false);

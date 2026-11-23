@@ -5,8 +5,15 @@ import { FloatNav } from "@/components/youku/FloatNav";
 import { searchTitles } from "@/lib/catalog.functions";
 import type { CatalogItem } from "@/lib/moviebox";
 import { watchSlug } from "@/lib/watch-links";
+import { useNativeApp } from "@/hooks/useNativeApp";
+import { AppTopBar } from "./AppShell";
 
 export function TopBar() {
+  const native = useNativeApp();
+  return native ? <AppTopBar /> : <WebTopBar />;
+}
+
+function WebTopBar() {
   const navigate = useNavigate();
   const [query, setQuery] = useState("");
   const [searchOpen, setSearchOpen] = useState(false);

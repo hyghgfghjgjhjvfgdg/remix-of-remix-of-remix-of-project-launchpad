@@ -18,6 +18,7 @@ import android.view.Gravity;
 import android.view.View;
 import android.view.ViewGroup;
 import android.webkit.CookieManager;
+import android.webkit.JavascriptInterface;
 import android.webkit.URLUtil;
 import android.webkit.ValueCallback;
 import android.webkit.WebChromeClient;
@@ -75,13 +76,20 @@ public class MainActivity extends Activity {
         errorView = buildErrorView();
         stage.addView(errorView, new FrameLayout.LayoutParams(-1, -1));
 
-        root.addView(Nav.bar(this, false));
+        // The website draws the app's own top and bottom bars (Home, Music, LIVE, Downloads, Me).
+        root.setFitsSystemWindows(true);
         setContentView(root);
+        web.addJavascriptInterface(new Bridge(), "MovieMaxApp");
 
         if (Build.VERSION.SDK_INT >= 33) requestPermissions(new String[]{Manifest.permission.POST_NOTIFICATIONS}, 9);
         watchNetwork();
         applyNetwork(Util.online(this));
-        if (b != null) web.restoreState(b); else web.loadUrl(Util.site(this));
+        String start = startUrl(getIntent());
+        if (start != null) web.loadUrl(start);
+        else if (b != null) web.restoreState(b);
+        else web.loadUrl(Util.site(this));
+        LatestJob.schedule(this);
+        LatestJob.checkNow(this);
         // Pick up a domain change made while the app is open.
         new Thread(() -> Util.refreshActiveSite(getApplicationContext())).start();
     }
@@ -139,8 +147,13 @@ public class MainActivity extends Activity {
         s.setMediaPlaybackRequiresUserGesture(false);
         s.setSupportMultipleWindows(true);
         s.setJavaScriptCanOpenWindowsAutomatically(true);
-        s.setLoadWithOverviewMode(true);
+        // Fit every phone: use the page's own mobile layout, ignore the phone's font-size setting.
+        s.setLoadWithOverviewMode(false);
         s.setUseWideViewPort(true);
+        s.setTextZoom(100);
+        s.setSupportZoom(false);
+        s.setBuiltInZoomControls(false);
+        s.setDisplayZoomControls(false);
         // Google sign-in refuses pages that announce themselves as an in-app WebView.
         s.setUserAgentString(s.getUserAgentString().replace("; wv", "") + " MovieMaxApp/" + BuildConfig.VERSION_NAME);
         CookieManager.getInstance().setAcceptCookie(true);
@@ -163,9 +176,55 @@ public class MainActivity extends Activity {
         });
     }
 
-    private void refreshNav() {
-        root.removeViewAt(1);
-        root.addView(Nav.bar(this, false));
+    private void refreshNav() { /* the website's own bottom bar shows Downloads */ }
+
+    /** Page to open from the website's "Get app" link (moviemax://open) or a new-movie notification. */
+    private String startUrl(Intent i) {
+        if (i == null) return null;
+        String site = Util.site(this);
+        String path = i.getStringExtra("path");
+        String session = null;
+        Uri data = i.getData();
+        if (data != null && "moviemax".equals(data.getScheme())) {
+            path = data.getQueryParameter("path");
+            session = data.getQueryParameter("s");
+        }
+        if (path == null || !path.startsWith("/") || path.startsWith("//")) return null;
+        String url = site + path;
+        if (session != null && session.matches("[A-Za-z0-9_-]{20,20000}")) url += "#mmx_s=" + session;
+        return url;
+    }
+
+    @Override
+    protected void onNewIntent(Intent i) {
+        super.onNewIntent(i);
+        setIntent(i);
+        String start = startUrl(i);
+        if (start != null) web.loadUrl(start);
+    }
+
+    /** Called by the website (window.MovieMaxApp) for downloads and the Downloads tab. */
+    private class Bridge {
+        @JavascriptInterface
+        public void download(String url, String name) {
+            runOnUiThread(() -> {
+                Uri u = Uri.parse(url);
+                String host = String.valueOf(u.getHost());
+                String siteHost = String.valueOf(Uri.parse(web.getUrl() == null ? Util.site(MainActivity.this) : web.getUrl()).getHost());
+                if (!"https".equals(u.getScheme()) && !"http".equals(u.getScheme()) || !host.equals(siteHost)) return;
+                String file = name == null || name.trim().isEmpty() ? URLUtil.guessFileName(url, null, "video/mp4") : name;
+                DownloadService.send(MainActivity.this, "add", null, url, file);
+                Toast.makeText(MainActivity.this, "Added to Downloads", Toast.LENGTH_SHORT).show();
+            });
+        }
+
+        @JavascriptInterface
+        public void openDownloads() {
+            runOnUiThread(() -> startActivity(new Intent(MainActivity.this, DownloadsActivity.class)));
+        }
+
+        @JavascriptInterface
+        public String version() { return BuildConfig.VERSION_NAME; }
     }
 
     private boolean openOutside(Uri uri) {

@@ -1,3 +1,4 @@
+import { consumeSessionHandoff, isNativeApp } from "@/lib/native-app";
 import type { ErrorComponentProps } from "@tanstack/react-router";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import {
@@ -163,6 +164,8 @@ function RootComponent() {
 
   useEffect(() => {
     void registerDownloadWorker().catch(() => {});
+    consumeSessionHandoff();
+    if (isNativeApp()) document.documentElement.classList.add("native-app");
   }, []);
 
   return (

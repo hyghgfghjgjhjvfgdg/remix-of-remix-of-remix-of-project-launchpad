@@ -27,6 +27,7 @@ type Props = {
   catalogId?: string | undefined;
   season?: number | undefined;
   episode?: number | undefined;
+  seasons?: { season: number; episodes: number }[] | undefined;
 };
 
 const pill =
@@ -44,6 +45,7 @@ export function TitleActions({
   catalogId,
   season,
   episode,
+  seasons,
 }: Props) {
   const [panel, setPanel] = useState<"synopsis" | "comments" | null>(null);
   const [liked, setLiked] = useState(false);
@@ -290,6 +292,8 @@ export function TitleActions({
         catalogId={catalogId}
         season={season}
         episode={episode}
+        seasons={seasons}
+        titleName={titleName}
       />
     </div>
   );

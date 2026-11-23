@@ -359,6 +359,7 @@ function WatchPage() {
                 catalogId={playId}
                 season={season}
                 episode={episode}
+                seasons={title.seasons}
               />
 
               {!!related.data?.length && (

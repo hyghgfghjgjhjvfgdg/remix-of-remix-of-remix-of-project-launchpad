@@ -12,9 +12,14 @@ import {
 import { useSubscription } from "@/hooks/useSubscription";
 import { toast } from "sonner";
 import { getDetailPath } from "@/lib/moviebox";
+import { nativeDownload } from "@/lib/native-app";
+import { useNativeApp } from "@/hooks/useNativeApp";
+import { AppDownloadSheet } from "./AppDownloadSheet";
 
 /** Hand a same-origin attachment URL to the browser's own download manager. */
 function browserDownload(href: string) {
+  const name = new URL(href, window.location.href).searchParams.get("dl") ?? "download";
+  if (nativeDownload(href, name)) return;
   const a = document.createElement("a");
   a.href = href;
   a.rel = "noopener";
@@ -60,6 +65,9 @@ type Props = {
   catalogId?: string | undefined;
   season?: number | undefined;
   episode?: number | undefined;
+  /** Series seasons, so the app can download several episodes at once. */
+  seasons?: { season: number; episodes: number }[] | undefined;
+  titleName?: string | undefined;
 };
 
 export function DownloadDialog({
@@ -71,8 +79,11 @@ export function DownloadDialog({
   catalogId,
   season = 0,
   episode = 0,
+  seasons,
+  titleName,
 }: Props) {
   const { subscribed, requireSubscription } = useSubscription();
+  const native = useNativeApp();
   const [probed, setProbed] = useState<Record<string, number | null>>({});
 
   // Catalog downloads go straight to the browser's own download manager.
@@ -118,7 +129,7 @@ export function DownloadDialog({
       onClose();
       return;
     }
-    startBrowserDownload(source.url, filename);
+    if (!nativeDownload(mediaDownloadUrl(source.url, filename), `${filename}.mp4`)) startBrowserDownload(source.url, filename);
     onClose();
   };
 
@@ -130,6 +141,13 @@ export function DownloadDialog({
   };
 
   if (!open) return null;
+
+  if (native && catalogId) {
+    return (
+      <AppDownloadSheet onClose={onClose} sources={sources} baseName={baseName} catalogId={catalogId}
+        season={season} episode={episode} seasons={seasons} titleName={titleName} />
+    );
+  }
 
   const videos = catalogId
     ? [...sources].sort((a, b) => b.resolution - a.resolution)

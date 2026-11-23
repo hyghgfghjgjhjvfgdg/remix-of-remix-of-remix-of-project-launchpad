@@ -48,6 +48,7 @@ import { Route as TesoIndexRouteImport } from './routes/teso.index'
 import { Route as TesoIdRouteImport } from './routes/teso.$id'
 import { Route as WatchIdRouteImport } from './routes/watch.$id'
 import { Route as ApiPublicAdminUploadRouteImport } from './routes/api/public/admin-upload'
+import { Route as ApiPublicAppLatestRouteImport } from './routes/api/public/app-latest'
 import { Route as ApiPublicMovieRouteImport } from './routes/api/public/movie'
 import { Route as ApiPublicSongRouteImport } from './routes/api/public/song'
 import { Route as ApiPublicStreamRouteImport } from './routes/api/public/stream'
@@ -253,6 +254,11 @@ const ApiPublicAdminUploadRoute = ApiPublicAdminUploadRouteImport.update({
   path: '/api/public/admin-upload',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiPublicAppLatestRoute = ApiPublicAppLatestRouteImport.update({
+  id: '/api/public/app-latest',
+  path: '/api/public/app-latest',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ApiPublicMovieRoute = ApiPublicMovieRouteImport.update({
   id: '/api/public/movie',
   path: '/api/public/movie',
@@ -334,6 +340,7 @@ export interface FileRoutesByFullPath {
   '/luo/': typeof LuoIndexRoute
   '/teso/': typeof TesoIndexRoute
   '/api/public/admin-upload': typeof ApiPublicAdminUploadRoute
+  '/api/public/app-latest': typeof ApiPublicAppLatestRoute
   '/api/public/movie': typeof ApiPublicMovieRoute
   '/api/public/song': typeof ApiPublicSongRoute
   '/api/public/stream': typeof ApiPublicStreamRoute
@@ -382,6 +389,7 @@ export interface FileRoutesByTo {
   '/luo': typeof LuoIndexRoute
   '/teso': typeof TesoIndexRoute
   '/api/public/admin-upload': typeof ApiPublicAdminUploadRoute
+  '/api/public/app-latest': typeof ApiPublicAppLatestRoute
   '/api/public/movie': typeof ApiPublicMovieRoute
   '/api/public/song': typeof ApiPublicSongRoute
   '/api/public/stream': typeof ApiPublicStreamRoute
@@ -432,6 +440,7 @@ export interface FileRoutesById {
   '/luo/': typeof LuoIndexRoute
   '/teso/': typeof TesoIndexRoute
   '/api/public/admin-upload': typeof ApiPublicAdminUploadRoute
+  '/api/public/app-latest': typeof ApiPublicAppLatestRoute
   '/api/public/movie': typeof ApiPublicMovieRoute
   '/api/public/song': typeof ApiPublicSongRoute
   '/api/public/stream': typeof ApiPublicStreamRoute
@@ -483,6 +492,7 @@ export interface FileRouteTypes {
     | '/luo/'
     | '/teso/'
     | '/api/public/admin-upload'
+    | '/api/public/app-latest'
     | '/api/public/movie'
     | '/api/public/song'
     | '/api/public/stream'
@@ -531,6 +541,7 @@ export interface FileRouteTypes {
     | '/luo'
     | '/teso'
     | '/api/public/admin-upload'
+    | '/api/public/app-latest'
     | '/api/public/movie'
     | '/api/public/song'
     | '/api/public/stream'
@@ -580,6 +591,7 @@ export interface FileRouteTypes {
     | '/luo/'
     | '/teso/'
     | '/api/public/admin-upload'
+    | '/api/public/app-latest'
     | '/api/public/movie'
     | '/api/public/song'
     | '/api/public/stream'
@@ -628,6 +640,7 @@ export interface RootRouteChildren {
   LuoIndexRoute: typeof LuoIndexRoute
   TesoIndexRoute: typeof TesoIndexRoute
   ApiPublicAdminUploadRoute: typeof ApiPublicAdminUploadRoute
+  ApiPublicAppLatestRoute: typeof ApiPublicAppLatestRoute
   ApiPublicMovieRoute: typeof ApiPublicMovieRoute
   ApiPublicSongRoute: typeof ApiPublicSongRoute
   ApiPublicStreamRoute: typeof ApiPublicStreamRoute
@@ -913,6 +926,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiPublicAdminUploadRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/public/app-latest': {
+      id: '/api/public/app-latest'
+      path: '/api/public/app-latest'
+      fullPath: '/api/public/app-latest'
+      preLoaderRoute: typeof ApiPublicAppLatestRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/public/movie': {
       id: '/api/public/movie'
       path: '/api/public/movie'
@@ -1022,6 +1042,7 @@ const rootRouteChildren: RootRouteChildren = {
   LuoIndexRoute: LuoIndexRoute,
   TesoIndexRoute: TesoIndexRoute,
   ApiPublicAdminUploadRoute: ApiPublicAdminUploadRoute,
+  ApiPublicAppLatestRoute: ApiPublicAppLatestRoute,
   ApiPublicMovieRoute: ApiPublicMovieRoute,
   ApiPublicSongRoute: ApiPublicSongRoute,
   ApiPublicStreamRoute: ApiPublicStreamRoute,

@@ -1,6 +1,22 @@
 import { useEffect, useState } from "react";
 import { Download } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { getFbAuth } from "@/lib/firebase";
+import { buildOpenInAppUrl, isAndroidBrowser, isNativeApp } from "@/lib/native-app";
+
+/**
+ * Android phones: open this same page in the Movie max app (signed in as the same
+ * account), or download the app when it is not installed yet.
+ */
+function openOrDownloadApp() {
+  let session: string | null = null;
+  try {
+    const user = getFbAuth().currentUser;
+    if (user) session = JSON.stringify(user.toJSON());
+  } catch { /* signed out */ }
+  const apk = `${window.location.origin}/downloads/MovieMax.apk`;
+  window.location.href = buildOpenInAppUrl(window.location.pathname + window.location.search, apk, session);
+}
 
 type InstallPrompt = Event & {
   prompt: () => Promise<void>;
@@ -11,6 +27,10 @@ export function InstallAppButton() {
   const [prompt, setPrompt] = useState<InstallPrompt | null>(null);
   const [installed, setInstalled] = useState(false);
   const [busy, setBusy] = useState(false);
+  const [mode, setMode] = useState<"web" | "android" | "native">("web");
+  useEffect(() => {
+    setMode(isNativeApp() ? "native" : isAndroidBrowser() ? "android" : "web");
+  }, []);
   useEffect(() => {
     const standalone = window.matchMedia("(display-mode: standalone)");
     const sync = () => {
@@ -48,6 +68,18 @@ export function InstallAppButton() {
       }
     } finally { setPrompt(null); setBusy(false); }
   };
+  if (mode === "native") return null;
+  if (mode === "android") {
+    return (
+      <span className="shrink-0 rounded-full bg-app-install" title="Open in the Movie max app">
+        <Button size="sm" variant="secondary" onClick={openOrDownloadApp} aria-label="Open or download the Movie max app"
+          className="size-10 max-[380px]:size-9 max-[340px]:size-8 gap-1 rounded-full bg-app-install p-0 font-bold uppercase tracking-normal text-app-install-foreground hover:bg-app-install/90 sm:h-8 sm:w-auto sm:px-3.5 sm:text-[12px] [&_svg]:size-5 sm:[&_svg]:size-3.5">
+          <Download aria-hidden="true" strokeWidth={2} />
+          <span className="hidden sm:inline">GET APP</span>
+        </Button>
+      </span>
+    );
+  }
   if (installed) return null;
   return (
     <span className="shrink-0 rounded-full bg-app-install" title={!prompt ? "App installation is not available in this browser yet" : "Install MOVIE MAX"}>
