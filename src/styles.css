@@ -763,5 +763,5 @@
 /* Movie max Android app shell: two-row header (brand + search, category tabs). */
 .app-gradient { background-image: var(--gradient-app); }
 @media (max-width: 1023px) {
-  html.native-app body { padding-top: 40px; }
+  body { padding-top: 28px; }
 }

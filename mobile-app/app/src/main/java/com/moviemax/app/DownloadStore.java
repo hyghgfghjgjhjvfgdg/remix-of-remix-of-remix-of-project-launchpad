@@ -11,10 +11,11 @@ import java.util.List;
 
 /** Download list kept in the app's private storage, so it survives restarts. */
 final class DownloadStore {
-    static final String QUEUED = "queued", RUNNING = "running", PAUSED = "paused", DONE = "done", FAILED = "failed";
+    static final String QUEUED = "queued", RUNNING = "running", PAUSED = "paused", DONE = "done", FAILED = "failed", NETWORK = "network";
 
     static final class Item {
-        String id, url, name, path, status, error = "";
+        String id, url, name, path;
+        volatile String status, error = "";
         long total, done, createdAt, speed;
     }
 
@@ -56,7 +57,7 @@ final class DownloadStore {
                 File f = new File(it.path);
                 it.done = f.exists() ? f.length() : 0;
                 // The app was closed mid-download: keep the bytes and let the user resume.
-                if (RUNNING.equals(it.status) || QUEUED.equals(it.status)) it.status = PAUSED;
+                if (DownloadRules.recoverAfterRestart(it.status)) it.status = QUEUED;
                 items.add(it);
             }
         } catch (Exception ignored) {
@@ -117,7 +118,7 @@ final class DownloadStore {
 
     synchronized int active() {
         int n = 0;
-        for (Item it : items) if (RUNNING.equals(it.status) || QUEUED.equals(it.status)) n++;
+        for (Item it : items) if (DownloadRules.recoverAfterRestart(it.status)) n++;
         return n;
     }
 }

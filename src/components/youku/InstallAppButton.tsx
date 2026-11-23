@@ -68,14 +68,14 @@ export function InstallAppButton() {
       }
     } finally { setPrompt(null); setBusy(false); }
   };
-  if (mode === "native") return null;
+  if (mode === "native") return <Button size="sm" variant="secondary" aria-label="Check app updates" onClick={() => (window as unknown as { MovieMaxApp?: { checkUpdates?: () => void } }).MovieMaxApp?.checkUpdates?.()} className="h-9 shrink-0 gap-1 rounded-full bg-app-install px-2 text-[11px] font-bold text-app-install-foreground"><Download className="size-3.5" />App</Button>;
   if (mode === "android") {
     return (
       <span className="shrink-0 rounded-full bg-app-install" title="Open in the Movie max app">
         <Button size="sm" variant="secondary" onClick={openOrDownloadApp} aria-label="Open or download the Movie max app"
-          className="size-10 max-[380px]:size-9 max-[340px]:size-8 gap-1 rounded-full bg-app-install p-0 font-bold uppercase tracking-normal text-app-install-foreground hover:bg-app-install/90 sm:h-8 sm:w-auto sm:px-3.5 sm:text-[12px] [&_svg]:size-5 sm:[&_svg]:size-3.5">
+          className="h-9 w-auto gap-1 px-2 rounded-full bg-app-install font-bold uppercase tracking-normal text-app-install-foreground hover:bg-app-install/90 sm:h-8 sm:w-auto sm:px-3.5 sm:text-[12px] [&_svg]:size-5 sm:[&_svg]:size-3.5">
           <Download aria-hidden="true" strokeWidth={2} />
-          <span className="hidden sm:inline">GET APP</span>
+          <span className="inline">App</span>
         </Button>
       </span>
     );
@@ -85,9 +85,9 @@ export function InstallAppButton() {
     <span className="shrink-0 rounded-full bg-app-install" title={!prompt ? "App installation is not available in this browser yet" : "Install MOVIE MAX"}>
       <Button size="sm" variant="secondary" onClick={() => void install()} disabled={installed || !prompt || busy}
         aria-label={installed ? "App installed" : "Download app"}
-        className="size-10 max-[380px]:size-9 max-[340px]:size-8 gap-1 rounded-full bg-app-install p-0 font-bold uppercase tracking-normal text-app-install-foreground hover:bg-app-install/90 disabled:opacity-100 sm:h-8 sm:w-auto sm:px-3.5 sm:text-[12px] [&_svg]:size-5 sm:[&_svg]:size-3.5">
+        className="h-9 w-auto gap-1 px-2 rounded-full bg-app-install font-bold uppercase tracking-normal text-app-install-foreground hover:bg-app-install/90 disabled:opacity-100 sm:h-8 sm:w-auto sm:px-3.5 sm:text-[12px] [&_svg]:size-5 sm:[&_svg]:size-3.5">
         <Download aria-hidden="true" strokeWidth={2} />
-        <span className="hidden sm:inline">DOWNLOAD APP</span>
+        <span className="inline">App</span>
       </Button>
     </span>
   );

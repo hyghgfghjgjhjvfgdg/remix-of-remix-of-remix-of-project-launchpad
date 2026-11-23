@@ -70,8 +70,13 @@ public class MainActivity extends Activity {
 
         offlineBar = banner("No internet connection — showing saved content", 0xFFB3261E);
         stage.addView(offlineBar, top());
-        updateBar = banner("", getColor(R.color.accent));
+        updateBar = banner("", getColor(R.color.card));
         FrameLayout.LayoutParams ub = new FrameLayout.LayoutParams(-1, -2, Gravity.BOTTOM);
+        ub.setMargins(Util.dp(this,12),0,Util.dp(this,12),Util.dp(this,80));
+        updateBar.setPadding(Util.dp(this,16),Util.dp(this,14),Util.dp(this,16),Util.dp(this,14));
+        android.graphics.drawable.GradientDrawable updateBg = new android.graphics.drawable.GradientDrawable();
+        updateBg.setColor(getColor(R.color.card)); updateBg.setCornerRadius(Util.dp(this,8));
+        updateBg.setStroke(Util.dp(this,1),getColor(R.color.accent)); updateBar.setBackground(updateBg);
         stage.addView(updateBar, ub);
         errorView = buildErrorView();
         stage.addView(errorView, new FrameLayout.LayoutParams(-1, -1));
@@ -115,20 +120,23 @@ public class MainActivity extends Activity {
         v.setGravity(Gravity.CENTER);
         v.setBackgroundColor(getColor(R.color.bg));
         TextView t = new TextView(this);
+        android.widget.ImageView icon = new android.widget.ImageView(this);
+        icon.setImageResource(R.drawable.offline_icon);
+        v.addView(icon, new LinearLayout.LayoutParams(Util.dp(this, 140), Util.dp(this, 140)));
         t.setText("No internet connection");
         t.setTextColor(getColor(R.color.text));
         t.setTextSize(17);
         t.setTypeface(Typeface.DEFAULT_BOLD);
         v.addView(t);
         TextView s = new TextView(this);
-        s.setText("Your downloads still work offline.");
+        s.setText("Your saved movies are ready to watch.");
         s.setTextColor(getColor(R.color.muted));
         s.setPadding(0, Util.dp(this, 6), 0, Util.dp(this, 16));
         v.addView(s);
         LinearLayout row = new LinearLayout(this);
         TextView retry = Util.pill(this, "Try again", getColor(R.color.accent));
         retry.setOnClickListener(x -> { mainFailed = false; v.setVisibility(View.GONE); web.reload(); });
-        TextView dl = Util.pill(this, "Open downloads", 0xFF34353C);
+        TextView dl = Util.pill(this, "Open downloads", getColor(R.color.card));
         dl.setOnClickListener(x -> startActivity(new Intent(this, DownloadsActivity.class)));
         LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(-2, -2);
         lp.rightMargin = Util.dp(this, 8);
@@ -222,6 +230,17 @@ public class MainActivity extends Activity {
         public void openDownloads() {
             runOnUiThread(() -> startActivity(new Intent(MainActivity.this, DownloadsActivity.class)));
         }
+
+        @JavascriptInterface
+        public void auth(String refreshToken) { Membership.remember(MainActivity.this, refreshToken); }
+
+        @JavascriptInterface
+        public void membership(long until) {
+            Util.prefs(MainActivity.this).edit().putLong("member_until", until).apply();
+        }
+
+        @JavascriptInterface
+        public void checkUpdates() { runOnUiThread(() -> checkUpdate(true)); }
 
         @JavascriptInterface
         public String version() { return BuildConfig.VERSION_NAME; }
@@ -370,25 +389,27 @@ public class MainActivity extends Activity {
         if (!force && now - lastUpdateCheck < 30 * 60 * 1000) return;
         lastUpdateCheck = now;
         new Thread(() -> {
+            boolean available = false;
             try {
                 String site = Util.site(this);
                 JSONObject v = new JSONObject(Util.get(site + "/app-version.json?t=" + now, 8000));
                 int code = v.optInt("versionCode", 0);
                 if (code <= BuildConfig.VERSION_CODE) return;
+                available = true;
                 String apk = new URL(new URL(site + "/"), v.getString("apkUrl")).toString();
                 String label = v.optString("versionName", String.valueOf(code));
                 File dir = getExternalFilesDir("updates");
                 File out = new File(dir, "moviemax-" + code + ".apk");
                 if (!out.exists()) {
-                    showUpdate("Downloading update " + label + "…", null);
+                    showUpdate("Movie max " + label + " · Downloading update…", null);
                     File part = new File(dir, "moviemax-" + code + ".part");
                     fetch(apk, part, label);
                     if (!part.renameTo(out)) throw new Exception("save failed");
                 }
                 readyUpdate = out;
-                showUpdate("Update " + label + " is ready — tap to install", this::install);
+                showUpdate("Movie max " + label + " is ready · Tap to install", this::install);
             } catch (Exception e) {
-                if (readyUpdate == null) showUpdate("A new version is available — tap to download", () -> checkUpdate(true));
+                if (available && readyUpdate == null) showUpdate("A new version is available — tap to download", () -> checkUpdate(true));
             }
         }).start();
     }
@@ -407,7 +428,7 @@ public class MainActivity extends Activity {
                 done += n;
                 if (total > 0 && System.currentTimeMillis() - last > 700) {
                     last = System.currentTimeMillis();
-                    showUpdate("Downloading update " + label + "… " + (done * 100 / total) + "%", null);
+                    showUpdate("Movie max " + label + " · Downloading update… " + (done * 100 / total) + "%", null);
                 }
             }
         } finally {

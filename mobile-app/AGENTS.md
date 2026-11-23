@@ -1,2 +1,5 @@
 # Android app
 - Android app lives in `mobile-app/` (plain Java WebView, no AndroidX; see its README): it reads the live domain from Firestore `app_settings/active_site` (auto-saved by admins' dashboard visits) and self-updates from the site's `public/app-version.json` + `public/downloads/MovieMax.apk`. Why: domain changes and releases must not need a Play Store.
+
+- Native latest alerts use persisted network-constrained JobScheduler polling and cached feed rows shared with the widget; notification membership labels refresh the signed-in user’s Firestore rows using a Keystore-encrypted refresh token and fall back only to the last verified expiry, never grant download access. Why: alerts work after normal closing without extra messaging credentials.
+- DownloadService is a sticky foreground service with persisted Range-resume state and a distinct network-wait state; manual pause never auto-resumes. Why: closing the UI or losing connectivity must not discard transfers.

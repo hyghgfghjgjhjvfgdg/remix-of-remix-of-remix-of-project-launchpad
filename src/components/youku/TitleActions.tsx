@@ -51,6 +51,13 @@ export function TitleActions({
   const [liked, setLiked] = useState(false);
   const [copied, setCopied] = useState(false);
   const [downloadOpen, setDownloadOpen] = useState(false);
+  useEffect(() => {
+    const url = new URL(window.location.href);
+    if (url.searchParams.get("appAction") !== "download") return;
+    setDownloadOpen(true);
+    url.searchParams.delete("appAction");
+    window.history.replaceState(null, "", url.pathname + url.search + url.hash);
+  }, [titleId]);
   const [comments, setComments] = useState<Comment[]>([]);
   const [draft, setDraft] = useState("");
 

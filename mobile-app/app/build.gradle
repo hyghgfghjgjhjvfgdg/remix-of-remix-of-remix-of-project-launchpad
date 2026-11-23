@@ -8,8 +8,8 @@ android {
         minSdk 24
         targetSdk 34
         // Bump both for every release, and the same numbers in the website's public/app-version.json.
-        versionCode 2
-        versionName '1.0.1'
+        versionCode 3
+        versionName '1.0.2'
         // Used until the app has read the active website from Firebase once.
         buildConfigField 'String', 'DEFAULT_SITE', '"https://luofilm.site"'
         buildConfigField 'String', 'ACTIVE_SITE_DOC', '"https://firestore.googleapis.com/v1/projects/luo-film-2026/databases/(default)/documents/app_settings/active_site?key=AIzaSyBTSFk7GSITIHQ9WxSdi1BoVvcr4FXuZe0"'

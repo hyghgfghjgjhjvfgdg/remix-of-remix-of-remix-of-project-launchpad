@@ -8,6 +8,7 @@ import {
   useState,
   type ReactNode,
 } from "react";
+import { getFbAuth } from "@/lib/firebase";
 import { toast } from "sonner";
 import { SubscribeModal } from "@/components/auth/SubscribeModal";
 import { AuthModal } from "@/components/auth/AuthModal";
@@ -107,8 +108,10 @@ export function SubscriptionProvider({ children }: { children: ReactNode }) {
   /* ---------- membership state (expiry is enforced on every read) ---------- */
   useEffect(() => {
     let alive = true;
+    (window as unknown as { MovieMaxApp?: { auth?: (token: string) => void } }).MovieMaxApp?.auth?.(getFbAuth().currentUser?.refreshToken ?? "");
     if (!user) {
       setSubscribed(false);
+      (window as unknown as { MovieMaxApp?: { membership?: (until: number) => void } }).MovieMaxApp?.membership?.(0);
       setDeviceBlocked(false);
       setOthers([]);
       return;
@@ -124,6 +127,8 @@ export function SubscriptionProvider({ children }: { children: ReactNode }) {
       if (!alive) return;
       setDeviceLimit(live.reduce((max, s) => Math.max(max, resolveDeviceLimit(s, plans)), 1));
       setSubscribed(live.length > 0);
+      const memberUntil = live.reduce((max, row) => Math.max(max, row.expires_at ? Date.parse(String(row.expires_at)) || 0 : Date.now() + 86400000), 0);
+      (window as unknown as { MovieMaxApp?: { membership?: (until: number) => void } }).MovieMaxApp?.membership?.(memberUntil);
 
       // Re-check exactly when the furthest membership runs out, so access is
       // revoked mid-session instead of surviving until the next reload.

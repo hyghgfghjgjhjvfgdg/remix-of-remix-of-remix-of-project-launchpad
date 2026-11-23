@@ -26,6 +26,28 @@ public class DownloadService extends Service {
     private static final int NOTE_ID = 7;
     private static final int MAX_PARALLEL = 2;
     private final Set<String> working = new HashSet<>();
+    private android.net.ConnectivityManager.NetworkCallback network;
+    @Override public void onCreate() {
+        super.onCreate();
+        network = new android.net.ConnectivityManager.NetworkCallback() {
+            @Override public void onAvailable(android.net.Network n) {
+                for (DownloadStore.Item it : DownloadStore.get(DownloadService.this).all())
+                    if (DownloadRules.autoResume(it.status)) { it.status = DownloadStore.QUEUED; it.error = ""; }
+                pump();
+            }
+            @Override public void onLost(android.net.Network n) {
+                if (Util.online(DownloadService.this)) return;
+                for (DownloadStore.Item it : DownloadStore.get(DownloadService.this).all())
+                    if (DownloadStore.RUNNING.equals(it.status) || DownloadStore.QUEUED.equals(it.status)) it.status = DownloadStore.NETWORK;
+                DownloadStore.get(DownloadService.this).save(true); updateNote();
+            }
+        };
+        getSystemService(android.net.ConnectivityManager.class).registerDefaultNetworkCallback(network);
+    }
+    @Override public void onDestroy() {
+        if (network != null) getSystemService(android.net.ConnectivityManager.class).unregisterNetworkCallback(network);
+        super.onDestroy();
+    }
 
     static void send(Context c, String action, String id, String url, String name) {
         Intent i = new Intent(c, DownloadService.class).putExtra(ACTION, action);
@@ -50,14 +72,14 @@ public class DownloadService extends Service {
                     store.add(intent.getStringExtra(URL_EXTRA), intent.getStringExtra(NAME));
                     break;
                 case "pause":
-                    if (it != null && !DownloadStore.DONE.equals(it.status)) it.status = DownloadStore.PAUSED;
+                    if (it != null && !DownloadStore.DONE.equals(it.status)) { it.status = DownloadStore.PAUSED; postItem(it); }
                     break;
                 case "resume":
                     if (it != null && !DownloadStore.DONE.equals(it.status)) { it.status = DownloadStore.QUEUED; it.error = ""; }
                     break;
                 case "cancel":
                 case "delete":
-                    if (it != null) { it.status = DownloadStore.PAUSED; store.remove(it.id); }
+                    if (it != null) { it.status = DownloadStore.PAUSED; store.remove(it.id); getSystemService(NotificationManager.class).cancel(it.id.hashCode()); }
                     break;
                 default:
                     break;
@@ -65,7 +87,7 @@ public class DownloadService extends Service {
             store.save(true);
         }
         pump();
-        return START_NOT_STICKY;
+        return START_STICKY;
     }
 
     private synchronized void pump() {
@@ -73,12 +95,14 @@ public class DownloadService extends Service {
         for (DownloadStore.Item it : store.all()) {
             if (working.size() >= MAX_PARALLEL) break;
             if (DownloadStore.QUEUED.equals(it.status) && !working.contains(it.id)) {
+                if (!Util.online(this)) { it.status = DownloadStore.NETWORK; postItem(it); continue; }
                 working.add(it.id);
                 it.status = DownloadStore.RUNNING;
                 new Thread(() -> run(it), "dl-" + it.id).start();
             }
         }
-        if (working.isEmpty()) {
+        boolean waiting = store.all().stream().anyMatch(i -> DownloadStore.NETWORK.equals(i.status));
+        if (working.isEmpty() && !waiting) {
             stopForeground(true);
             stopSelf();
         } else {
@@ -95,6 +119,7 @@ public class DownloadService extends Service {
                 break;
             } catch (Exception e) {
                 if (!DownloadStore.RUNNING.equals(it.status)) break;
+                if (!Util.online(this)) { it.status = DownloadStore.NETWORK; break; }
                 attempts++;
                 if (attempts > 6) {
                     it.status = DownloadStore.FAILED;
@@ -105,6 +130,7 @@ public class DownloadService extends Service {
             }
         }
         it.speed = 0;
+        postItem(it);
         store.save(true);
         synchronized (this) { working.remove(it.id); }
         pump();
@@ -130,6 +156,10 @@ public class DownloadService extends Service {
             con.disconnect();
             throw new Exception("HTTP " + code);
         }
+        String contentType = con.getContentType();
+        if (contentType != null && (contentType.contains("text/") || contentType.contains("json"))) { con.disconnect(); throw new Exception("Not a movie file"); }
+        String contentRange = con.getHeaderField("Content-Range");
+        if (code == 206 && (contentRange == null || !contentRange.startsWith("bytes " + have + "-"))) { con.disconnect(); throw new Exception("Invalid resume range"); }
         boolean append = code == 206 && have > 0;
         if (!append) have = 0;
         String range = con.getHeaderField("Content-Range");
@@ -185,16 +215,36 @@ public class DownloadService extends Service {
         else startForeground(NOTE_ID, n);
     }
 
-    private void updateNote() {
-        DownloadStore.Item first = null;
-        for (DownloadStore.Item it : DownloadStore.get(this).all()) {
-            if (DownloadStore.RUNNING.equals(it.status)) { first = it; break; }
+    private PendingIntent control(DownloadStore.Item it, String action) {
+        Intent i = new Intent(this, DownloadService.class).putExtra(ACTION, action).putExtra(ID, it.id);
+        return PendingIntent.getService(this, (it.id + action).hashCode(), i, PendingIntent.FLAG_IMMUTABLE | PendingIntent.FLAG_UPDATE_CURRENT);
+    }
+    private void postItem(DownloadStore.Item it) {
+        boolean done = DownloadStore.DONE.equals(it.status);
+        boolean running = DownloadStore.RUNNING.equals(it.status) || DownloadStore.QUEUED.equals(it.status);
+        int pct = it.total > 0 ? (int)(it.done * 100 / it.total) : 0;
+        String status = done ? "Downloaded" : DownloadStore.NETWORK.equals(it.status) ? "Waiting for internet · auto-resume" : running ? "Downloading · " + Util.size(it.speed) + "/s" : "Paused";
+        String detail = status + " · " + Util.size(it.done) + " / " + Util.size(it.total);
+        Notification.Builder b = builder().setOngoing(running).setContentTitle(it.name).setContentText(detail)
+            .setStyle(new Notification.BigTextStyle().bigText(detail)).setColor(getColor(R.color.accent));
+        if (!done) {
+            b.setProgress(100,pct,it.total <= 0 && running);
+            b.addAction(new Notification.Action.Builder(null, running ? "Pause" : "Resume", control(it, running ? "pause" : "resume")).build());
+            b.addAction(new Notification.Action.Builder(null,"Cancel",control(it,"cancel")).build());
+        } else {
+            Intent watch = new Intent(this, PlayerActivity.class).putExtra("path",it.path);
+            Intent export = new Intent(this, DownloadsActivity.class).putExtra("export",it.id);
+            b.addAction(new Notification.Action.Builder(null,"Watch",PendingIntent.getActivity(this,(it.id+"watch").hashCode(),watch,PendingIntent.FLAG_IMMUTABLE | PendingIntent.FLAG_UPDATE_CURRENT)).build());
+            b.addAction(new Notification.Action.Builder(null,"Export",PendingIntent.getActivity(this,(it.id+"export").hashCode(),export,PendingIntent.FLAG_IMMUTABLE | PendingIntent.FLAG_UPDATE_CURRENT)).build());
+            b.setAutoCancel(true);
         }
-        if (first == null) return;
-        int pct = first.total > 0 ? (int) (first.done * 100 / first.total) : 0;
-        Notification n = builder().setContentTitle(first.name)
-                .setContentText(pct + "% · " + Util.size(first.done) + (first.total > 0 ? " of " + Util.size(first.total) : ""))
-                .setProgress(100, pct, first.total <= 0).build();
-        getSystemService(NotificationManager.class).notify(NOTE_ID, n);
+        getSystemService(NotificationManager.class).notify(it.id.hashCode(),b.build());
+    }
+    private void updateNote() {
+        DownloadStore store = DownloadStore.get(this);
+        for (DownloadStore.Item it : store.all())
+            if (DownloadStore.RUNNING.equals(it.status) || DownloadStore.NETWORK.equals(it.status)) postItem(it);
+        getSystemService(NotificationManager.class).notify(NOTE_ID,builder().setContentTitle("Movie max downloads")
+            .setContentText(Util.online(this) ? store.active() + " active transfers" : "Waiting for internet · resumes automatically").build());
     }
 }

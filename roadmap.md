@@ -106,3 +106,9 @@
 - [x] Wallet shows only real provider data: real balances (no ledger estimates) and live transactions straight from Whop, PayPal and pawaPay (Relworx has no transaction list; its live balance is shown).
 - [x] Confirm the Pay with card button change is only in the subscription popup / pay page (admin dashboard has none).
 - [x] More special dashboard features: refunds from the dashboard, monthly revenue goal, who's online now, payment problem list.
+
+## Mobile app 1.0.2
+- [x] Full-label mobile header and matching app theme.
+- [x] Background latest notifications, download actions and network recovery, compact downloads, offline icon, update presentation, home-screen widget implemented in signed 1.0.2.
+- [x] Build signed 1.0.2 update; mobile website and native widget layout captured.
+- [ ] Verify native notification actions, downloads/network recovery, widget placement and signed-in membership on a real phone (software emulator stalls; no authenticated Firebase user).

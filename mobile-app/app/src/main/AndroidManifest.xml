@@ -16,7 +16,7 @@
         android:theme="@style/AppTheme"
         android:usesCleartextTraffic="false"
         android:hardwareAccelerated="true"
-        android:largeHeap="true">
+        android:largeHeap="true" android:allowBackup="false">
 
         <activity android:name=".SplashActivity" android:exported="true" android:theme="@style/SplashTheme"
             >
@@ -47,6 +47,8 @@
         <service android:name=".LatestJob" android:exported="false"
             android:permission="android.permission.BIND_JOB_SERVICE" />
 
+        <receiver android:name=".BootReceiver" android:exported="false"><intent-filter><action android:name="android.intent.action.BOOT_COMPLETED"/><action android:name="android.intent.action.MY_PACKAGE_REPLACED"/></intent-filter></receiver>
+        <receiver android:name=".LatestWidget" android:exported="true"><intent-filter><action android:name="android.appwidget.action.APPWIDGET_UPDATE"/></intent-filter><meta-data android:name="android.appwidget.provider" android:resource="@xml/latest_widget_info"/></receiver>
         <provider android:name=".ApkProvider" android:authorities="com.moviemax.app.apk"
             android:exported="false" android:grantUriPermissions="true" />
     </application>

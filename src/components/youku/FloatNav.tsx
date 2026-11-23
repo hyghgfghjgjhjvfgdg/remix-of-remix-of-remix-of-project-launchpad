@@ -119,18 +119,18 @@ export function FloatNav({ onSearch }: { onSearch?: () => void } = {}) {
           target="_blank"
           rel="noopener"
           aria-label="Live TV"
-          className="grid size-10 max-[380px]:size-9 max-[340px]:size-8 shrink-0 place-items-center rounded-full bg-livetv p-0 text-[12px] font-bold uppercase text-livetv-foreground transition hover:brightness-110 sm:h-8 sm:w-auto sm:px-3.5"
+          className="grid h-9 w-auto shrink-0 place-items-center rounded-full bg-livetv px-2 text-[12px] font-bold uppercase text-livetv-foreground transition hover:brightness-110 sm:h-8 sm:w-auto sm:px-3.5"
         >
           <span className="flex items-center gap-1">
             <Tv className="size-4 sm:size-3.5" />
-            <span className="hidden sm:inline">Live TV</span>
+            <span>Live TV</span>
           </span>
         </a>
 
         <Link
           to="/developer"
           aria-label="Developer dashboard"
-          className={`grid size-10 max-[380px]:size-9 max-[340px]:size-8 shrink-0 place-items-center rounded-full bg-devnav p-0 text-[12px] font-bold uppercase text-devnav-foreground transition hover:brightness-110 sm:h-8 sm:w-auto sm:px-3.5 ${
+          className={`hidden lg:grid size-10 shrink-0 place-items-center rounded-full bg-devnav p-0 text-[12px] font-bold uppercase text-devnav-foreground transition hover:brightness-110 sm:h-8 sm:w-auto sm:px-3.5 ${
             pathname.startsWith("/developer") || pathname.startsWith("/doc") ? "ring-2 ring-foreground/70" : ""
           }`}
         >
@@ -146,9 +146,9 @@ export function FloatNav({ onSearch }: { onSearch?: () => void } = {}) {
               type="button"
               onClick={() => setMenu((v) => !v)}
               aria-label="Account"
-              className="grid size-10 max-[380px]:size-9 max-[340px]:size-8 place-items-center rounded-full bg-foreground/15 p-0 text-foreground transition hover:bg-foreground/25 sm:size-8"
+              className="grid h-9 w-auto px-2 place-items-center rounded-full bg-foreground/15 text-foreground transition hover:bg-foreground/25 sm:size-8"
             >
-              <UserIcon className="size-4" />
+              <UserIcon className="size-4" /><span className="ml-1 text-[11px]">Account</span>
             </Button>
             {menu && (
               <div
@@ -190,11 +190,11 @@ export function FloatNav({ onSearch }: { onSearch?: () => void } = {}) {
             type="button"
             onClick={() => setAuthOpen(true)}
             aria-label="Login"
-            className="grid size-10 max-[380px]:size-9 max-[340px]:size-8 shrink-0 place-items-center rounded-full bg-foreground p-0 text-[12px] font-black uppercase tracking-wide text-background transition hover:opacity-90 sm:h-8 sm:w-auto sm:px-3.5"
+            className="grid h-9 w-auto shrink-0 place-items-center rounded-full bg-foreground px-2 text-[12px] font-black uppercase tracking-wide text-background transition hover:opacity-90 sm:h-8 sm:w-auto sm:px-3.5"
           >
             <span className="flex items-center gap-1">
               <LogIn className="size-3.5" />
-              <span className="hidden sm:inline">Login</span>
+              <span>Login</span>
             </span>
           </Button>
         )}

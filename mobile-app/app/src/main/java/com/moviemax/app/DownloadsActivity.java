@@ -36,6 +36,7 @@ public class DownloadsActivity extends Activity {
     private LinearLayout list;
     private final Handler ui = new Handler(Looper.getMainLooper());
     private String pendingExport = null;
+    private String filter = "all";
     private final Runnable tick = new Runnable() {
         @Override public void run() { render(); ui.postDelayed(this, 1000); }
     };
@@ -53,6 +54,15 @@ public class DownloadsActivity extends Activity {
         title.setTextColor(getColor(R.color.text));
         title.setPadding(Util.dp(this, 16), Util.dp(this, 14), Util.dp(this, 16), Util.dp(this, 6));
         root.addView(title);
+        root.setFitsSystemWindows(true);
+        LinearLayout tabs = new LinearLayout(this);
+        tabs.setPadding(Util.dp(this,12),Util.dp(this,8),Util.dp(this,12),Util.dp(this,8));
+        for (String key : new String[]{"all","active","completed"}) {
+            TextView tab = Util.pill(this,key.equals("all") ? "All" : key.equals("active") ? "Downloading" : "Completed",getColor(R.color.card));
+            tab.setOnClickListener(v -> { filter=key; render(); });
+            LinearLayout.LayoutParams tl = new LinearLayout.LayoutParams(0,-2,1); tl.setMargins(0,0,Util.dp(this,6),0); tabs.addView(tab,tl);
+        }
+        root.addView(tabs);
         ScrollView scroll = new ScrollView(this);
         list = new LinearLayout(this);
         list.setOrientation(LinearLayout.VERTICAL);
@@ -61,6 +71,9 @@ public class DownloadsActivity extends Activity {
         root.addView(scroll, new LinearLayout.LayoutParams(-1, 0, 1));
         root.addView(Nav.bar(this, true));
         setContentView(root);
+        String exportId = getIntent().getStringExtra("export");
+        DownloadStore.Item exportItem = exportId == null ? null : DownloadStore.get(this).find(exportId);
+        if (exportItem != null && DownloadStore.DONE.equals(exportItem.status)) export(exportItem);
     }
 
     @Override protected void onResume() { super.onResume(); ui.post(tick); }
@@ -71,14 +84,18 @@ public class DownloadsActivity extends Activity {
         List<DownloadStore.Item> items = DownloadStore.get(this).all();
         if (items.isEmpty()) {
             TextView empty = new TextView(this);
-            empty.setText("No downloads yet.\nTap Download on any movie or episode and it appears here.");
+            empty.setText("No downloads yet");
             empty.setTextColor(getColor(R.color.muted));
             empty.setGravity(Gravity.CENTER);
             empty.setPadding(0, Util.dp(this, 80), 0, 0);
             list.addView(empty);
             return;
         }
-        for (DownloadStore.Item it : items) list.addView(card(it));
+        for (DownloadStore.Item it : items) {
+            boolean done = DownloadStore.DONE.equals(it.status);
+            if (filter.equals("active") && done || filter.equals("completed") && !done) continue;
+            list.addView(card(it));
+        }
     }
 
     private LinearLayout card(DownloadStore.Item it) {
@@ -87,7 +104,7 @@ public class DownloadsActivity extends Activity {
         c.setPadding(Util.dp(this, 12), Util.dp(this, 10), Util.dp(this, 12), Util.dp(this, 10));
         GradientDrawable bg = new GradientDrawable();
         bg.setColor(getColor(R.color.card));
-        bg.setCornerRadius(Util.dp(this, 12));
+        bg.setCornerRadius(Util.dp(this, 8));
         c.setBackground(bg);
         LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(-1, -2);
         lp.topMargin = Util.dp(this, 8);
@@ -107,7 +124,8 @@ public class DownloadsActivity extends Activity {
             case DownloadStore.DONE: line = "Downloaded · " + Util.size(it.total > 0 ? it.total : it.done); break;
             case DownloadStore.RUNNING: line = pct + "% · " + Util.size(it.done) + (it.total > 0 ? " of " + Util.size(it.total) : "")
                     + (it.speed > 0 ? " · " + Util.size(it.speed) + "/s" : ""); break;
-            case DownloadStore.QUEUED: line = "Waiting…"; break;
+            case DownloadStore.QUEUED: line = "Queued"; break;
+            case DownloadStore.NETWORK: line = "Waiting for internet · auto-resume · " + Util.size(it.done) + " / " + Util.size(it.total); break;
             case DownloadStore.FAILED: line = it.error.isEmpty() ? "Stopped" : it.error; break;
             default: line = "Paused · " + pct + "% · " + Util.size(it.done) + (it.total > 0 ? " of " + Util.size(it.total) : "");
         }
@@ -128,7 +146,7 @@ public class DownloadsActivity extends Activity {
         LinearLayout row = new LinearLayout(this);
         row.setOrientation(LinearLayout.HORIZONTAL);
         row.setPadding(0, Util.dp(this, 8), 0, 0);
-        int accent = getColor(R.color.accent), grey = 0xFF34353C, red = 0xFFB3261E;
+        int accent = getColor(R.color.accent), grey = getColor(R.color.bar), red = getColor(R.color.danger);
         if (DownloadStore.DONE.equals(it.status)) {
             add(row, Util.pill(this, "▶ Watch", accent), () ->
                     startActivity(new Intent(this, PlayerActivity.class).putExtra("path", it.path)));

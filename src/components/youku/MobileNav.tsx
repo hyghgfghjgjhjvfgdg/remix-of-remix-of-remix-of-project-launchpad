@@ -1,3 +1,4 @@
+import { Button } from "@/components/ui/button";
 import { useState, type ReactNode } from "react";
 import { Link, useRouterState } from "@tanstack/react-router";
 import { useQueryClient } from "@tanstack/react-query";
@@ -80,9 +81,9 @@ function WebMobileNav() {
             <Body icon={<User className="size-6 shrink-0 text-sidebar-foreground opacity-100" />} label="Profile" active={pathname.startsWith("/profile")} />
           </Link>
         ) : (
-          <button type="button" onClick={openProfile} className={item(false)}>
+          <Button variant="ghost" type="button" onClick={openProfile} className={item(false)}>
             <Body icon={<User className="size-6 shrink-0 text-sidebar-foreground opacity-65" />} label="Profile" active={false} />
-          </button>
+          </Button>
         )}
       </nav>
       <AuthModal open={authOpen} onOpenChange={setAuthOpen} />

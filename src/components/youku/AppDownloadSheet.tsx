@@ -1,5 +1,6 @@
 import { useMemo, useState } from "react";
 import { ChevronDown, Check, Crown, Download, X } from "lucide-react";
+import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 import { catalogMediaUrl } from "@/lib/download";
 import { getDetailPath } from "@/lib/moviebox";
@@ -91,13 +92,13 @@ export function AppDownloadSheet({ onClose, sources, baseName, catalogId, season
 
   return (
     <div className="fixed inset-0 z-[70] flex items-end bg-background/70">
-      <button aria-label="Close" className="absolute inset-0 cursor-default" onClick={onClose} />
+      <Button aria-label="Close" className="absolute inset-0 cursor-default" onClick={onClose} />
       <div className="relative z-10 flex max-h-[78vh] w-full flex-col overflow-hidden rounded-t-2xl bg-card">
         <div className="flex items-center justify-between border-b border-border px-4 py-3">
           <h3 className="text-base font-bold text-foreground">Download</h3>
-          <button onClick={onClose} aria-label="Close download" className="p-1 text-muted-foreground">
+          <Button onClick={onClose} aria-label="Close download" className="p-1 text-muted-foreground">
             <X className="size-5" />
-          </button>
+          </Button>
         </div>
 
         <div className="min-h-0 flex-1 overflow-y-auto px-3 pb-3">
@@ -113,7 +114,7 @@ export function AppDownloadSheet({ onClose, sources, baseName, catalogId, season
                   aria-label="Season"
                   className="appearance-none rounded-md border border-border bg-transparent py-1.5 pl-3 pr-8 text-sm text-foreground"
                 >
-                  {seasons!.map((s) => (
+                  {(seasons ?? []).map((s) => (
                     <option key={s.season} value={s.season} className="bg-card">
                       Season {pad(s.season)}
                     </option>
@@ -124,7 +125,7 @@ export function AppDownloadSheet({ onClose, sources, baseName, catalogId, season
             )}
             <div className="mt-3 grid grid-cols-4 gap-2">
               {(qualities.length ? qualities : [0]).map((r) => (
-                <button
+                <Button
                   key={r}
                   type="button"
                   onClick={() => setQuality(r)}
@@ -134,7 +135,7 @@ export function AppDownloadSheet({ onClose, sources, baseName, catalogId, season
                 >
                   {r >= 720 && <Crown className="size-3" />}
                   {r ? `${r}P` : "AUTO"}
-                </button>
+                </Button>
               ))}
             </div>
           </div>
@@ -145,12 +146,12 @@ export function AppDownloadSheet({ onClose, sources, baseName, catalogId, season
                 const on = picked.has(key);
                 return (
                   <li key={key}>
-                    <button type="button" onClick={() => toggle(key)} className="flex w-full items-center gap-3 py-3 text-left">
+                    <Button type="button" onClick={() => toggle(key)} className="flex w-full items-center gap-3 py-3 text-left">
                       <span className={`grid size-5 shrink-0 place-items-center rounded-full border ${on ? "border-app-accent bg-app-accent text-app-accent-foreground" : "border-muted-foreground"}`}>
                         {on && <Check className="size-3.5" strokeWidth={3} />}
                       </span>
                       <span className="text-[15px] text-foreground">S{pad(pickSeason)} E{pad(i + 1)}</span>
-                    </button>
+                    </Button>
                   </li>
                 );
               })}
@@ -160,14 +161,14 @@ export function AppDownloadSheet({ onClose, sources, baseName, catalogId, season
 
         <div className="flex items-center gap-3 border-t border-border bg-background px-4 py-3 pb-[calc(0.75rem+env(safe-area-inset-bottom))]">
           {series && (
-            <button type="button" onClick={toggleAll} className="flex shrink-0 items-center gap-2 text-sm text-foreground">
+            <Button type="button" onClick={toggleAll} className="flex shrink-0 items-center gap-2 text-sm text-foreground">
               <span className={`grid size-5 place-items-center rounded-full border ${allPicked ? "border-app-accent bg-app-accent text-app-accent-foreground" : "border-muted-foreground"}`}>
                 {allPicked && <Check className="size-3.5" strokeWidth={3} />}
               </span>
               Select All
-            </button>
+            </Button>
           )}
-          <button
+          <Button
             type="button"
             disabled={busy}
             onClick={() => void start()}
@@ -175,7 +176,7 @@ export function AppDownloadSheet({ onClose, sources, baseName, catalogId, season
           >
             <Download className="size-5" />
             {busy ? "Adding…" : "Download"}
-          </button>
+          </Button>
         </div>
       </div>
     </div>

@@ -1,7 +1,7 @@
 {
-  "versionCode": 2,
-  "versionName": "1.0.1",
+  "versionCode": 3,
+  "versionName": "1.0.2",
   "apkUrl": "/downloads/MovieMax.apk",
-  "notes": "Fits all phone sizes, new download window with seasons and quality, new-movie notifications, opens from the website already signed in.",
+  "notes": "Full mobile header, latest MovieBox and Luganda notifications, background download controls and auto-resume, compact downloads, offline artwork, latest-movies home-screen widget.",
   "force": false
 }
