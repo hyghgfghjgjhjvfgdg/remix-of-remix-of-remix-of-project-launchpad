@@ -764,4 +764,5 @@
 .app-gradient { background-image: var(--gradient-app); }
 @media (max-width: 1023px) {
   body { padding-top: 28px; }
+  .native-app body { padding-top: 40px; }
 }

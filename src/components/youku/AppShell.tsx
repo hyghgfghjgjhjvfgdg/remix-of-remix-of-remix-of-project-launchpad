@@ -56,9 +56,10 @@ function ItemLink({ item, className, onClick }: { item: Item; className: string;
 }
 
 /** App header: logo + search, then LIVE + category tabs that scroll, with a grid of every section. */
-export function AppTopBar() {
+export function AppTopBar({ floatNav = false }: { floatNav?: boolean } = {}) {
   const isActive = useActive();
   const [grid, setGrid] = useState(false);
+  const { openSubscribe } = useSubscription();
   useEffect(() => {
     const action = new URLSearchParams(window.location.search).get("appAction");
     if (action === "subscribe") window.dispatchEvent(new Event("luofilm:open-subscribe"));
@@ -66,7 +67,22 @@ export function AppTopBar() {
 
   return (
     <header className="fixed inset-x-0 top-0 z-50 bg-background pt-[env(safe-area-inset-top)]">
-      <FloatNav />
+      {floatNav ? (
+        <FloatNav />
+      ) : (
+        <div className="flex h-14 items-center gap-3 px-3">
+          <Link to="/" aria-label="Movie max home" className="shrink-0">
+            <img src={logoSrc} alt="Movie max" className="h-9 w-auto max-w-[96px] object-contain" />
+          </Link>
+          <Link
+            to="/search"
+            className="flex h-10 min-w-0 flex-1 items-center gap-2 rounded-md bg-muted px-3 text-[15px] text-muted-foreground"
+          >
+            <Search className="size-5 shrink-0" />
+            <span className="truncate">Search movies / series</span>
+          </Link>
+        </div>
+      )}
 
       <div className="flex h-10 items-center">
         <nav className="flex min-w-0 flex-1 items-center gap-5 overflow-x-auto whitespace-nowrap px-3 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
@@ -88,6 +104,18 @@ export function AppTopBar() {
 
       {grid && (
         <div className="grid grid-cols-4 gap-2 border-t border-border bg-background px-3 pb-4 pt-3 shadow-2xl">
+          {!floatNav && (
+            <Button
+              type="button"
+              onClick={() => {
+                setGrid(false);
+                openSubscribe();
+              }}
+              className="flex h-10 items-center justify-center gap-1 truncate rounded-lg bg-app-accent/20 px-1 text-[13px] font-semibold text-sidebar-primary"
+            >
+              <Crown className="size-4" /> Subscribe
+            </Button>
+          )}
           {GRID.map((item) => (
             <ItemLink
               key={item.label}
@@ -140,7 +168,7 @@ export function AppBottomNav() {
             </span>
           </Link>
         </div>
-        <Button variant="ghost" type="button" onClick={openNativeDownloads} className={cell(false)}>
+        <Button variant="ghost" type="button" onClick={openNativeDownloads} className={`${cell(false)} h-auto rounded-none px-0 py-0 hover:bg-transparent [&_svg]:size-6`}>
           <Body icon={<Download className="size-6" />} label="Downloads" />
         </Button>
         {user ? (
@@ -148,7 +176,7 @@ export function AppBottomNav() {
             <Body icon={<User className="size-6" />} label="Me" />
           </Link>
         ) : (
-          <Button variant="ghost" type="button" onClick={() => setAuthOpen(true)} className={cell(false)}>
+          <Button variant="ghost" type="button" onClick={() => setAuthOpen(true)} className={`${cell(false)} h-auto rounded-none px-0 py-0 hover:bg-transparent [&_svg]:size-6`}>
             <Body icon={<User className="size-6" />} label="Me" />
           </Button>
         )}
