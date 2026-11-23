@@ -70,30 +70,43 @@ public class LatestJob extends JobService {
             boolean first = seen.isEmpty();
             prefs.edit().putString("latest_items", items.toString()).apply();
             LatestWidget.refresh(c);
+            Set<String> current = new HashSet<>();
             int posted = 0;
-            Set<String> now = new HashSet<>(seen);
             for (int i = 0; i < items.length(); i++) {
                 JSONObject it = items.getJSONObject(i);
                 String id = it.optString("id");
                 if (id.isEmpty()) continue;
-                if (first || seen.contains(id)) { now.add(id); continue; }
-                if (posted >= 3) continue;
-                now.add(id);
+                current.add(id);
+                if (seen.contains(id)) continue;
+                // First run: show only the newest title so the user sees alerts work, without a flood.
+                if (posted >= (first ? 1 : 3)) continue;
                 notify(c, site, it);
                 posted++;
             }
-            // Keep the memory small: only the current list plus a little history.
-            if (now.size() > 300) now = new HashSet<>(java.util.Arrays.asList(now.toArray(new String[0])).subList(0, 300));
-            prefs.edit().putStringSet("latest_seen", now).apply();
+            // Remember every title in today's list (so none repeats) plus some recent history.
+            Set<String> keep = new HashSet<>(current);
+            for (String id : seen) { if (keep.size() >= 400) break; keep.add(id); }
+            prefs.edit().putStringSet("latest_seen", keep).apply();
         } catch (Exception ignored) {
         }
+    }
+
+    /** "Show me" button on the Downloads page: posts the newest title right away. */
+    static void notifyNewest(Context c) {
+        new Thread(() -> {
+            try {
+                JSONArray items = new JSONObject(Util.get(Util.site(c) + "/api/public/app-latest", 15000)).optJSONArray("items");
+                if (items != null && items.length() > 0) notify(c, Util.site(c), items.getJSONObject(0));
+            } catch (Exception ignored) {
+            }
+        }).start();
     }
 
     static void notify(Context c, String site, JSONObject it) {
         NotificationManager nm = c.getSystemService(NotificationManager.class);
         if (nm == null) return;
         if (Build.VERSION.SDK_INT >= 26) {
-            nm.createNotificationChannel(new NotificationChannel(CHANNEL, "New movies", NotificationManager.IMPORTANCE_DEFAULT));
+            nm.createNotificationChannel(new NotificationChannel(CHANNEL, "New movies", NotificationManager.IMPORTANCE_HIGH));
         }
         String title = it.optString("title", "New on Movie max");
         String description = it.optString("description", "");

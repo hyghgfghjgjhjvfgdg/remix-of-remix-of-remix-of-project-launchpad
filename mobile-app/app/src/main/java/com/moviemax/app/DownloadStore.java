@@ -23,6 +23,7 @@ final class DownloadStore {
     private final Context ctx;
     private final List<Item> items = new ArrayList<>();
     private long lastSave = 0;
+    private int seq = 0;
 
     private DownloadStore(Context c) {
         ctx = c.getApplicationContext();
@@ -96,7 +97,9 @@ final class DownloadStore {
             if (it.url.equals(url) && !FAILED.equals(it.status)) return it;
         }
         Item it = new Item();
-        it.id = Long.toString(System.currentTimeMillis(), 36);
+        // Several episodes are added within the same millisecond: ids must still be unique.
+        it.id = Long.toString(System.currentTimeMillis(), 36) + "-" + Integer.toString(++seq, 36)
+                + Integer.toString((int) (Math.random() * 1296), 36);
         it.url = url;
         it.name = name;
         String safe = name.replaceAll("[^A-Za-z0-9._ ()-]", "_");
@@ -114,6 +117,20 @@ final class DownloadStore {
         items.remove(it);
         new File(it.path).delete();
         save(true);
+    }
+
+    /** Download list for the website's in-app Downloads page. */
+    synchronized String toJson() {
+        JSONArray arr = new JSONArray();
+        try {
+            for (Item it : items) {
+                arr.put(new JSONObject().put("id", it.id).put("name", it.name).put("status", it.status)
+                        .put("error", it.error).put("total", it.total).put("done", it.done)
+                        .put("speed", it.speed).put("createdAt", it.createdAt));
+            }
+        } catch (Exception ignored) {
+        }
+        return arr.toString();
     }
 
     synchronized int active() {

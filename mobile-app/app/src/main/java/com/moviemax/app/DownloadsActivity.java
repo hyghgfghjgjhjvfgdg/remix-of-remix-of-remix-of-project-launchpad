@@ -178,56 +178,13 @@ public class DownloadsActivity extends Activity {
                 .setNegativeButton("No", null).show();
     }
 
-    /** Copies a finished download to the phone's storage: Movies/Movie max. */
     private void export(DownloadStore.Item it) {
         if (Build.VERSION.SDK_INT < 29 && checkSelfPermission(Manifest.permission.WRITE_EXTERNAL_STORAGE) != PackageManager.PERMISSION_GRANTED) {
             pendingExport = it.id;
             requestPermissions(new String[]{Manifest.permission.WRITE_EXTERNAL_STORAGE}, 4);
             return;
         }
-        Toast.makeText(this, "Exporting to Movies/Movie max…", Toast.LENGTH_SHORT).show();
-        new Thread(() -> {
-            String msg;
-            try {
-                String fileName = it.name.endsWith(".mp4") ? it.name : it.name + ".mp4";
-                if (Build.VERSION.SDK_INT >= 29) {
-                    ContentResolver cr = getContentResolver();
-                    ContentValues v = new ContentValues();
-                    v.put(MediaStore.Video.Media.DISPLAY_NAME, fileName);
-                    v.put(MediaStore.Video.Media.MIME_TYPE, "video/mp4");
-                    v.put(MediaStore.Video.Media.RELATIVE_PATH, Environment.DIRECTORY_MOVIES + "/Movie max");
-                    v.put(MediaStore.Video.Media.IS_PENDING, 1);
-                    Uri uri = cr.insert(MediaStore.Video.Media.getContentUri(MediaStore.VOLUME_EXTERNAL_PRIMARY), v);
-                    if (uri == null) throw new Exception("Storage not available");
-                    try (InputStream in = new FileInputStream(it.path); OutputStream out = cr.openOutputStream(uri)) {
-                        copy(in, out);
-                    }
-                    v.clear();
-                    v.put(MediaStore.Video.Media.IS_PENDING, 0);
-                    cr.update(uri, v, null, null);
-                } else {
-                    File dir = new File(Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_MOVIES), "Movie max");
-                    dir.mkdirs();
-                    File dest = new File(dir, fileName);
-                    try (InputStream in = new FileInputStream(it.path); OutputStream out = new FileOutputStream(dest)) {
-                        copy(in, out);
-                    }
-                    MediaScannerConnection.scanFile(this, new String[]{dest.getAbsolutePath()}, null, null);
-                }
-                msg = "Saved to Movies/Movie max";
-            } catch (Exception e) {
-                msg = "Export failed: " + e.getMessage();
-            }
-            String m = msg;
-            runOnUiThread(() -> Toast.makeText(this, m, Toast.LENGTH_LONG).show());
-        }).start();
-    }
-
-    private static void copy(InputStream in, OutputStream out) throws Exception {
-        if (out == null) throw new Exception("Storage not available");
-        byte[] buf = new byte[256 * 1024];
-        int n;
-        while ((n = in.read(buf)) > 0) out.write(buf, 0, n);
+        Exporter.export(this, it);
     }
 
     @Override

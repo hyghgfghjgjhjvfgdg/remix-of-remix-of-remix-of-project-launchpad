@@ -4,7 +4,29 @@
  * `window.MovieMaxApp` (download, openDownloads). Everything here is browser-only:
  * call it from effects or event handlers.
  */
-type Bridge = { download: (url: string, name: string) => void; openDownloads: () => void };
+type Bridge = {
+  download: (url: string, name: string) => void;
+  openDownloads: () => void;
+  // Added in app 1.0.3; older installs lack them.
+  downloads?: () => string;
+  control?: (action: "pause" | "resume" | "cancel" | "delete", id: string) => void;
+  watch?: (id: string) => void;
+  exportFile?: (id: string) => void;
+  addWidget?: () => boolean;
+  notificationsOn?: () => boolean;
+  enableNotifications?: () => void;
+};
+
+export type NativeDownload = {
+  id: string;
+  name: string;
+  status: "queued" | "running" | "paused" | "done" | "failed" | "network";
+  error: string;
+  total: number;
+  done: number;
+  speed: number;
+  createdAt: number;
+};
 
 const APP_PACKAGE = "com.moviemax.app";
 const SESSION_HASH = "mmx_s=";
@@ -34,6 +56,21 @@ export function nativeDownload(href: string, filename: string) {
 
 export function openNativeDownloads() {
   bridge()?.openDownloads();
+}
+
+/** The app's download list, or null outside the app / on app versions before 1.0.3. */
+export function nativeDownloads(): NativeDownload[] | null {
+  const b = bridge();
+  if (!b?.downloads) return null;
+  try {
+    return JSON.parse(b.downloads()) as NativeDownload[];
+  } catch {
+    return [];
+  }
+}
+
+export function nativeBridge() {
+  return bridge();
 }
 
 function toBase64Url(text: string) {

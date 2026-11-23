@@ -15,6 +15,7 @@ import { Route as ChannelsRouteImport } from './routes/channels'
 import { Route as DeveloperRouteImport } from './routes/developer'
 import { Route as DocRouteImport } from './routes/doc'
 import { Route as DocDotmdRouteImport } from './routes/doc[.]md'
+import { Route as DownloadsRouteImport } from './routes/downloads'
 import { Route as MusicRouteImport } from './routes/music'
 import { Route as PlansRouteImport } from './routes/plans'
 import { Route as ProfileRouteImport } from './routes/profile'
@@ -86,6 +87,11 @@ const DocRoute = DocRouteImport.update({
 const DocDotmdRoute = DocDotmdRouteImport.update({
   id: '/doc.md',
   path: '/doc.md',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const DownloadsRoute = DownloadsRouteImport.update({
+  id: '/downloads',
+  path: '/downloads',
   getParentRoute: () => rootRouteImport,
 } as any)
 const MusicRoute = MusicRouteImport.update({
@@ -307,6 +313,7 @@ export interface FileRoutesByFullPath {
   '/developer': typeof DeveloperRoute
   '/doc': typeof DocRouteWithChildren
   '/doc.md': typeof DocDotmdRoute
+  '/downloads': typeof DownloadsRoute
   '/music': typeof MusicRoute
   '/plans': typeof PlansRoute
   '/profile': typeof ProfileRoute
@@ -356,6 +363,7 @@ export interface FileRoutesByTo {
   '/channels': typeof ChannelsRoute
   '/developer': typeof DeveloperRoute
   '/doc.md': typeof DocDotmdRoute
+  '/downloads': typeof DownloadsRoute
   '/music': typeof MusicRoute
   '/plans': typeof PlansRoute
   '/profile': typeof ProfileRoute
@@ -407,6 +415,7 @@ export interface FileRoutesById {
   '/developer': typeof DeveloperRoute
   '/doc': typeof DocRouteWithChildren
   '/doc.md': typeof DocDotmdRoute
+  '/downloads': typeof DownloadsRoute
   '/music': typeof MusicRoute
   '/plans': typeof PlansRoute
   '/profile': typeof ProfileRoute
@@ -459,6 +468,7 @@ export interface FileRouteTypes {
     | '/developer'
     | '/doc'
     | '/doc.md'
+    | '/downloads'
     | '/music'
     | '/plans'
     | '/profile'
@@ -508,6 +518,7 @@ export interface FileRouteTypes {
     | '/channels'
     | '/developer'
     | '/doc.md'
+    | '/downloads'
     | '/music'
     | '/plans'
     | '/profile'
@@ -558,6 +569,7 @@ export interface FileRouteTypes {
     | '/developer'
     | '/doc'
     | '/doc.md'
+    | '/downloads'
     | '/music'
     | '/plans'
     | '/profile'
@@ -609,6 +621,7 @@ export interface RootRouteChildren {
   DeveloperRoute: typeof DeveloperRoute
   DocRoute: typeof DocRouteWithChildren
   DocDotmdRoute: typeof DocDotmdRoute
+  DownloadsRoute: typeof DownloadsRoute
   MusicRoute: typeof MusicRoute
   PlansRoute: typeof PlansRoute
   ProfileRoute: typeof ProfileRoute
@@ -693,6 +706,13 @@ declare module '@tanstack/react-router' {
       path: '/doc.md'
       fullPath: '/doc.md'
       preLoaderRoute: typeof DocDotmdRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/downloads': {
+      id: '/downloads'
+      path: '/downloads'
+      fullPath: '/downloads'
+      preLoaderRoute: typeof DownloadsRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/music': {
@@ -1011,6 +1031,7 @@ const rootRouteChildren: RootRouteChildren = {
   DeveloperRoute: DeveloperRoute,
   DocRoute: DocRouteWithChildren,
   DocDotmdRoute: DocDotmdRoute,
+  DownloadsRoute: DownloadsRoute,
   MusicRoute: MusicRoute,
   PlansRoute: PlansRoute,
   ProfileRoute: ProfileRoute,

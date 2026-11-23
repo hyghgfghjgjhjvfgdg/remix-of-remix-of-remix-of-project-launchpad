@@ -24,7 +24,7 @@ import java.util.Set;
 public class DownloadService extends Service {
     static final String ACTION = "action", ID = "id", URL_EXTRA = "url", NAME = "name";
     private static final int NOTE_ID = 7;
-    private static final int MAX_PARALLEL = 2;
+    private static final int MAX_PARALLEL = 3;
     private final Set<String> working = new HashSet<>();
     private android.net.ConnectivityManager.NetworkCallback network;
     @Override public void onCreate() {

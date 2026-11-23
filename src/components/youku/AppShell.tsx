@@ -8,7 +8,6 @@ import { useSubscription } from "@/hooks/useSubscription";
 import { CATEGORIES } from "@/lib/categories";
 import { FloatNav } from "./FloatNav";
 import { Button } from "@/components/ui/button";
-import { openNativeDownloads } from "@/lib/native-app";
 
 type PageTo = "/" | "/channels" | "/luo" | "/luganda" | "/teso" | "/music" | "/search" | "/developer";
 type Item = { label: string; page: PageTo; slug?: never } | { label: string; slug: string; page?: never };
@@ -168,9 +167,9 @@ export function AppBottomNav() {
             </span>
           </Link>
         </div>
-        <Button variant="ghost" type="button" onClick={openNativeDownloads} className={`${cell(false)} h-auto rounded-none px-0 py-0 hover:bg-transparent [&_svg]:size-6`}>
+        <Link to="/downloads" className={cell(pathname.startsWith("/downloads"))}>
           <Body icon={<Download className="size-6" />} label="Downloads" />
-        </Button>
+        </Link>
         {user ? (
           <Link to="/profile" className={cell(pathname.startsWith("/profile"))}>
             <Body icon={<User className="size-6" />} label="Me" />

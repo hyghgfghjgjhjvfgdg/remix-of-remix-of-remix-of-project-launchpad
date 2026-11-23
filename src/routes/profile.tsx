@@ -12,6 +12,7 @@ import { referralLink, syncReferrals } from "@/lib/referrals";
 import { listDevices } from "@/lib/devices";
 import { getArtist } from "@/lib/music";
 import { ArtistProfile } from "@/components/music/ArtistProfile";
+import { MobileNav } from "@/components/youku/MobileNav";
 
 export const Route = createFileRoute("/profile")({
   head: () => ({
@@ -80,7 +81,7 @@ function ProfilePage() {
     queryFn: () => listDevices(user!.id).catch(() => []),
   });
 
-  if (loading) return <div className="mx-auto max-w-3xl px-4 py-24 text-center text-muted-foreground">Loading…</div>;
+  if (loading) return <div className="mx-auto max-w-3xl px-4 py-24 text-center text-muted-foreground">Loading…<MobileNav /></div>;
 
   if (!user)
     return (
@@ -92,6 +93,7 @@ function ProfilePage() {
           <LogIn className="size-4" /> Sign in
         </button>
         <AuthModal open={authOpen} onOpenChange={setAuthOpen} />
+        <MobileNav />
       </div>
     );
 
@@ -232,6 +234,7 @@ function ProfilePage() {
       <button onClick={() => void signOut()} className="flex w-full items-center justify-center gap-2 rounded-2xl bg-card py-3 font-bold text-destructive ring-1 ring-border">
         <LogOut className="size-4" /> Sign out
       </button>
+      <MobileNav />
     </div>
   );
 }

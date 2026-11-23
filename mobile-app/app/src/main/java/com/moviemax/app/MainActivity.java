@@ -54,6 +54,13 @@ public class MainActivity extends Activity {
     private long lastUpdateCheck = 0;
     private File readyUpdate = null;
     private ConnectivityManager.NetworkCallback netCallback;
+    private FrameLayout splash;
+    private android.widget.ProgressBar splashBar;
+    private TextView splashStatus;
+    private long splashStart;
+    private boolean splashGone = false;
+    private String pendingExport = null;
+    private final android.os.Handler ui = new android.os.Handler(android.os.Looper.getMainLooper());
 
     @Override
     protected void onCreate(Bundle b) {
@@ -80,6 +87,8 @@ public class MainActivity extends Activity {
         stage.addView(updateBar, ub);
         errorView = buildErrorView();
         stage.addView(errorView, new FrameLayout.LayoutParams(-1, -1));
+        splash = buildSplash();
+        stage.addView(splash, new FrameLayout.LayoutParams(-1, -1));
 
         // The website draws the app's own top and bottom bars (Home, Music, LIVE, Downloads, Me).
         root.setFitsSystemWindows(true);
@@ -90,13 +99,86 @@ public class MainActivity extends Activity {
         watchNetwork();
         applyNetwork(Util.online(this));
         String start = startUrl(getIntent());
+        String firstSite = Util.site(this);
         if (start != null) web.loadUrl(start);
-        else if (b != null) web.restoreState(b);
-        else web.loadUrl(Util.site(this));
+        else if (b != null) { web.restoreState(b); hideSplash(); }
+        else web.loadUrl(firstSite);
         LatestJob.schedule(this);
         LatestJob.checkNow(this);
-        // Pick up a domain change made while the app is open.
-        new Thread(() -> Util.refreshActiveSite(getApplicationContext())).start();
+        // Pick up a domain change; if the website moved, open the new address.
+        new Thread(() -> {
+            Util.refreshActiveSite(getApplicationContext());
+            String now = Util.site(this);
+            if (!now.equals(firstSite) && start == null) runOnUiThread(() -> web.loadUrl(now));
+        }).start();
+        // Never keep the user on the splash, even on a very slow network.
+        ui.postDelayed(this::hideSplash, 15000);
+    }
+
+    /** Splash shown inside the app until the website has fully loaded underneath it. */
+    private FrameLayout buildSplash() {
+        splashStart = System.currentTimeMillis();
+        FrameLayout f = new FrameLayout(this);
+        f.setBackgroundColor(getColor(R.color.bg));
+        f.setClickable(true);
+        LinearLayout col = new LinearLayout(this);
+        col.setOrientation(LinearLayout.VERTICAL);
+        col.setGravity(Gravity.CENTER);
+        f.addView(col, new FrameLayout.LayoutParams(-1, -1));
+        android.widget.ImageView logo = new android.widget.ImageView(this);
+        logo.setImageResource(R.drawable.splash_logo);
+        col.addView(logo, new LinearLayout.LayoutParams(Util.dp(this, 104), Util.dp(this, 104)));
+        TextView name = new TextView(this);
+        name.setText("MOVIE MAX");
+        name.setTextSize(24);
+        name.setTypeface(Typeface.DEFAULT_BOLD);
+        name.setLetterSpacing(0.12f);
+        name.setTextColor(0xFFFFFFFF);
+        name.post(() -> name.getPaint().setShader(new android.graphics.LinearGradient(0, 0, name.getWidth(), 0,
+                0xFF2896FF, 0xFF9B46FF, android.graphics.Shader.TileMode.CLAMP)));
+        LinearLayout.LayoutParams np = new LinearLayout.LayoutParams(-2, -2);
+        np.topMargin = Util.dp(this, 12);
+        col.addView(name, np);
+        splashBar = new android.widget.ProgressBar(this, null, android.R.attr.progressBarStyleHorizontal);
+        splashBar.setMax(100);
+        splashBar.setProgress(5);
+        splashBar.setProgressTintList(android.content.res.ColorStateList.valueOf(getColor(R.color.accent)));
+        LinearLayout.LayoutParams bp = new LinearLayout.LayoutParams(Util.dp(this, 180), Util.dp(this, 6));
+        bp.topMargin = Util.dp(this, 26);
+        col.addView(splashBar, bp);
+        splashStatus = new TextView(this);
+        splashStatus.setText(Util.online(this) ? "Connecting…" : "Offline · opening saved pages…");
+        splashStatus.setTextColor(getColor(R.color.muted));
+        splashStatus.setTextSize(12);
+        LinearLayout.LayoutParams sp = new LinearLayout.LayoutParams(-2, -2);
+        sp.topMargin = Util.dp(this, 10);
+        col.addView(splashStatus, sp);
+        logo.setScaleX(0.6f); logo.setScaleY(0.6f); logo.setAlpha(0f);
+        logo.animate().scaleX(1f).scaleY(1f).alpha(1f).setDuration(600)
+                .setInterpolator(new android.view.animation.OvershootInterpolator(1.6f)).start();
+        name.setAlpha(0f); name.setTranslationY(Util.dp(this, 16));
+        name.animate().alpha(1f).translationY(0).setStartDelay(300).setDuration(420).start();
+        return f;
+    }
+
+    private void splashProgress(int pct) {
+        if (splashGone || splashBar == null) return;
+        int p = Math.max(splashBar.getProgress(), Math.min(pct, 96));
+        splashBar.setProgress(p);
+        splashStatus.setText(p < 30 ? "Connecting…" : p < 80 ? "Loading movies… " + p + "%" : "Almost ready… " + p + "%");
+    }
+
+    /** Fades the splash out once the page is ready (at least 1.2 s so the animation is seen). */
+    private void hideSplash() {
+        if (splashGone) return;
+        long wait = Math.max(0, 1200 - (System.currentTimeMillis() - splashStart));
+        ui.postDelayed(() -> {
+            if (splashGone) return;
+            splashGone = true;
+            splashBar.setProgress(100);
+            splashStatus.setText("Ready");
+            splash.animate().alpha(0f).setDuration(280).withEndAction(() -> splash.setVisibility(View.GONE)).start();
+        }, wait);
     }
 
     private FrameLayout.LayoutParams top() { return new FrameLayout.LayoutParams(-1, -2, Gravity.TOP); }
@@ -226,9 +308,63 @@ public class MainActivity extends Activity {
             });
         }
 
+        /** Older website versions call this; the Downloads page now lives inside the website. */
         @JavascriptInterface
         public void openDownloads() {
-            runOnUiThread(() -> startActivity(new Intent(MainActivity.this, DownloadsActivity.class)));
+            runOnUiThread(() -> {
+                if (Util.online(MainActivity.this)) web.loadUrl(Util.site(MainActivity.this) + "/downloads");
+                else startActivity(new Intent(MainActivity.this, DownloadsActivity.class));
+            });
+        }
+
+        @JavascriptInterface
+        public String downloads() { return DownloadStore.get(MainActivity.this).toJson(); }
+
+        /** pause · resume · cancel · delete for one download. */
+        @JavascriptInterface
+        public void control(String action, String id) {
+            if (!"pause".equals(action) && !"resume".equals(action) && !"cancel".equals(action) && !"delete".equals(action)) return;
+            DownloadService.send(MainActivity.this, action, id, null, null);
+        }
+
+        @JavascriptInterface
+        public void watch(String id) {
+            DownloadStore.Item it = DownloadStore.get(MainActivity.this).find(id);
+            if (it == null || !DownloadStore.DONE.equals(it.status)) return;
+            runOnUiThread(() -> startActivity(new Intent(MainActivity.this, PlayerActivity.class).putExtra("path", it.path)));
+        }
+
+        @JavascriptInterface
+        public void exportFile(String id) { runOnUiThread(() -> exportDownload(id)); }
+
+        /** Asks the home screen to place the Latest movies widget. Returns false where phones don't support it. */
+        @JavascriptInterface
+        public boolean addWidget() {
+            if (Build.VERSION.SDK_INT < 26) return false;
+            android.appwidget.AppWidgetManager m = getSystemService(android.appwidget.AppWidgetManager.class);
+            if (m == null || !m.isRequestPinAppWidgetSupported()) return false;
+            return m.requestPinAppWidget(new android.content.ComponentName(MainActivity.this, LatestWidget.class), null, null);
+        }
+
+        /** True when the phone allows Movie max notifications. */
+        @JavascriptInterface
+        public boolean notificationsOn() {
+            android.app.NotificationManager nm = getSystemService(android.app.NotificationManager.class);
+            return nm != null && nm.areNotificationsEnabled();
+        }
+
+        /** Turns notifications on (asks, or opens settings) and shows the newest title right away. */
+        @JavascriptInterface
+        public void enableNotifications() {
+            runOnUiThread(() -> {
+                if (notificationsOn()) { LatestJob.notifyNewest(MainActivity.this); return; }
+                if (Build.VERSION.SDK_INT >= 33 && checkSelfPermission(Manifest.permission.POST_NOTIFICATIONS) != android.content.pm.PackageManager.PERMISSION_GRANTED
+                        && shouldShowRequestPermissionRationale(Manifest.permission.POST_NOTIFICATIONS)) {
+                    requestPermissions(new String[]{Manifest.permission.POST_NOTIFICATIONS}, 9);
+                    return;
+                }
+                startActivity(new Intent(Settings.ACTION_APP_NOTIFICATION_SETTINGS).putExtra(Settings.EXTRA_APP_PACKAGE, getPackageName()));
+            });
         }
 
         @JavascriptInterface
@@ -244,6 +380,26 @@ public class MainActivity extends Activity {
 
         @JavascriptInterface
         public String version() { return BuildConfig.VERSION_NAME; }
+    }
+
+    private void exportDownload(String id) {
+        DownloadStore.Item it = DownloadStore.get(this).find(id);
+        if (it == null) return;
+        if (Build.VERSION.SDK_INT < 29 && checkSelfPermission(Manifest.permission.WRITE_EXTERNAL_STORAGE) != android.content.pm.PackageManager.PERMISSION_GRANTED) {
+            pendingExport = id;
+            requestPermissions(new String[]{Manifest.permission.WRITE_EXTERNAL_STORAGE}, 4);
+            return;
+        }
+        Exporter.export(this, it);
+    }
+
+    @Override
+    public void onRequestPermissionsResult(int code, String[] p, int[] r) {
+        super.onRequestPermissionsResult(code, p, r);
+        boolean ok = r.length > 0 && r[0] == android.content.pm.PackageManager.PERMISSION_GRANTED;
+        if (code == 4 && pendingExport != null && ok) exportDownload(pendingExport);
+        if (code == 4) pendingExport = null;
+        if (code == 9 && ok) LatestJob.checkNow(this);
     }
 
     private boolean openOutside(Uri uri) {
@@ -279,6 +435,8 @@ public class MainActivity extends Activity {
         public void onPageFinished(WebView v, String url) {
             if (!mainFailed) errorView.setVisibility(View.GONE);
             CookieManager.getInstance().flush();
+            // Give the page a moment to draw its movies before the splash fades.
+            ui.postDelayed(MainActivity.this::hideSplash, 500);
         }
 
         @Override
@@ -286,10 +444,14 @@ public class MainActivity extends Activity {
             if (!r.isForMainFrame()) return;
             mainFailed = true;
             errorView.setVisibility(View.VISIBLE);
+            hideSplash();
         }
     }
 
     private class Chrome extends WebChromeClient {
+        @Override
+        public void onProgressChanged(WebView v, int p) { splashProgress(p); }
+
         @Override
         public void onShowCustomView(View view, CustomViewCallback cb) {
             customView = view;
