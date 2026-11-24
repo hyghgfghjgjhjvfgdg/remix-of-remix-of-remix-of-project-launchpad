@@ -96,6 +96,10 @@ export async function signUpWithIdentifier(input: {
 }
 
 export async function signInWithGoogle() {
+  // Google's own account window first (no Firebase auth-domain URL).
+  const { signInWithGoogleButton } = await import("./google-one-tap");
+  if (await signInWithGoogleButton()) return;
+  // Only if Google's script cannot load at all.
   const auth = getFbAuth();
   await setPersistence(auth, browserLocalPersistence).catch(() => {});
   const cred = await signInWithPopup(auth, new GoogleAuthProvider());
@@ -114,6 +118,7 @@ export function authMessage(err: unknown) {
     "auth/weak-password": "Use at least 6 characters for the password.",
     "auth/too-many-requests": "Too many attempts. Wait a moment and try again.",
     "auth/popup-closed-by-user": "Google sign-in was cancelled.",
+    "auth/popup-blocked": "Your browser blocked the Google window. Allow pop-ups and try again.",
     "auth/operation-not-allowed": "This sign-in method is not enabled yet.",
     "auth/unauthorized-domain": "This site is not authorised for sign-in yet.",
     "permission-denied": "Your account was created, but saving your profile was blocked.",

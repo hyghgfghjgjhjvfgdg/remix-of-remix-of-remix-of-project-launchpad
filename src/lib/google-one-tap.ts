@@ -18,6 +18,9 @@ type Gsi = {
       renderButton?: (el: HTMLElement, o: Record<string, unknown>) => void;
       disableAutoSelect: () => void;
     };
+    oauth2?: {
+      initTokenClient: (o: Record<string, unknown>) => { requestAccessToken: (o?: Record<string, unknown>) => void };
+    };
   };
 };
 
@@ -60,6 +63,38 @@ export async function signInWithGoogleIdToken(idToken: string) {
   const cred = await signInWithCredential(auth, GoogleAuthProvider.credential(idToken));
   await ensureProfile(cred.user);
   return cred;
+}
+
+/**
+ * "Continue with Google" button: opens Google's own account window
+ * (accounts.google.com, same Google client as One Tap) instead of the
+ * Firebase auth-domain popup, then signs the result into Firebase.
+ * Returns false when Google's script cannot load so callers can fall back.
+ */
+export async function signInWithGoogleButton(): Promise<boolean> {
+  if (!oneTapAvailable()) return false;
+  const gsi = await loadGsi();
+  const oauth2 = gsi?.accounts?.oauth2;
+  if (!oauth2?.initTokenClient) return false;
+  const accessToken = await new Promise<string>((resolve, reject) => {
+    const client = oauth2.initTokenClient({
+      client_id: GOOGLE_CLIENT_ID,
+      scope: "openid email profile",
+      callback: (res: { access_token?: string; error?: string }) => {
+        if (res?.access_token) resolve(res.access_token);
+        else reject(new Error(res?.error === "access_denied" ? "auth/popup-closed-by-user" : res?.error || "Google sign-in failed."));
+      },
+      error_callback: (err: { type?: string }) => {
+        reject(new Error(err?.type === "popup_failed_to_open" ? "auth/popup-blocked" : "auth/popup-closed-by-user"));
+      },
+    });
+    client.requestAccessToken({ prompt: "select_account" });
+  });
+  const auth = getFbAuth();
+  await setPersistence(auth, browserLocalPersistence).catch(() => {});
+  const cred = await signInWithCredential(auth, GoogleAuthProvider.credential(null, accessToken));
+  await ensureProfile(cred.user);
+  return true;
 }
 
 export function oneTapAvailable() {
