@@ -3,3 +3,4 @@
 
 - Native latest alerts use persisted network-constrained JobScheduler polling and cached feed rows shared with the widget; notification membership labels refresh the signed-in user’s Firestore rows using a Keystore-encrypted refresh token and fall back only to the last verified expiry, never grant download access. Why: alerts work after normal closing without extra messaging credentials.
 - DownloadService is a sticky foreground service with persisted Range-resume state and a distinct network-wait state; manual pause never auto-resumes. Why: closing the UI or losing connectivity must not discard transfers.
+- The website's Android App button opens a window with a direct `/downloads/MovieMax.apk` link plus an intent-based Open in app; never rely on the intent fallback alone. Why: in-app browsers and embedded previews ignore intent fallbacks, so the APK never downloaded.

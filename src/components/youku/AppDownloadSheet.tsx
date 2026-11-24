@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { ChevronDown, Check, Crown, Download, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
@@ -90,13 +90,52 @@ export function AppDownloadSheet({ onClose, sources, baseName, catalogId, season
     onClose();
   };
 
+  // Phones: keep the player visible at the top and open the panel right under it (MovieBox layout).
+  const [top, setTop] = useState<number | null>(null);
+  useEffect(() => {
+    if (window.innerWidth >= 1024) return;
+    let cleanup: (() => void) | undefined;
+    let tries = 0;
+    const dock = (player: HTMLElement) => {
+      const place = () => setTop(Math.max(0, Math.round(player.getBoundingClientRect().bottom)));
+      const y = player.getBoundingClientRect().top + window.scrollY;
+      window.scrollTo({ top: Math.max(0, y), behavior: "instant" as ScrollBehavior });
+      place();
+      const raf = requestAnimationFrame(place);
+      const ro = new ResizeObserver(place);
+      ro.observe(player);
+      window.addEventListener("resize", place);
+      const prev = document.body.style.overflow;
+      document.body.style.overflow = "hidden";
+      cleanup = () => {
+        cancelAnimationFrame(raf);
+        ro.disconnect();
+        window.removeEventListener("resize", place);
+        document.body.style.overflow = prev;
+      };
+    };
+    // The player may still be loading when the panel opens from a notification.
+    const timer = window.setInterval(() => {
+      const player = document.querySelector<HTMLElement>("[data-watch-player]");
+      tries += 1;
+      if (player) { window.clearInterval(timer); dock(player); }
+      else if (tries > 40) window.clearInterval(timer);
+    }, 250);
+    return () => { window.clearInterval(timer); cleanup?.(); };
+  }, []);
+  const current = closest(sources);
+  const docked = top !== null;
+
   return (
-    <div className="fixed inset-0 z-[70] flex items-end bg-background/70">
-      <Button aria-label="Close" className="absolute inset-0 cursor-default" onClick={onClose} />
-      <div className="relative z-10 flex max-h-[78vh] w-full flex-col overflow-hidden rounded-t-2xl bg-card">
+    <div
+      className={docked ? "fixed inset-x-0 bottom-0 z-[70] flex" : "fixed inset-0 z-[70] flex items-end bg-background/70 lg:items-center lg:justify-center"}
+      style={docked ? { top } : undefined}
+    >
+      {!docked && <Button variant="ghost" aria-label="Close" className="absolute inset-0 cursor-default" onClick={onClose} />}
+      <div className={docked ? "relative z-10 flex h-full w-full flex-col overflow-hidden bg-card" : "relative z-10 flex max-h-[78vh] w-full flex-col overflow-hidden rounded-t-2xl bg-card lg:max-w-lg lg:rounded-2xl"}>
         <div className="flex items-center justify-between border-b border-border px-4 py-3">
           <h3 className="text-base font-bold text-foreground">Download</h3>
-          <Button onClick={onClose} aria-label="Close download" className="p-1 text-muted-foreground">
+          <Button variant="ghost" onClick={onClose} aria-label="Close download" className="h-auto p-1 text-muted-foreground">
             <X className="size-5" />
           </Button>
         </div>
@@ -125,7 +164,7 @@ export function AppDownloadSheet({ onClose, sources, baseName, catalogId, season
             )}
             <div className="mt-3 grid grid-cols-4 gap-2">
               {(qualities.length ? qualities : [0]).map((r) => (
-                <Button
+                <Button variant="ghost"
                   key={r}
                   type="button"
                   onClick={() => setQuality(r)}
@@ -140,17 +179,33 @@ export function AppDownloadSheet({ onClose, sources, baseName, catalogId, season
             </div>
           </div>
 
+          {!series && (
+            <div className="mt-1 flex items-center gap-3 py-3">
+              <span className="grid size-5 shrink-0 place-items-center rounded-full border border-app-accent bg-app-accent text-app-accent-foreground">
+                <Check className="size-3.5" strokeWidth={3} />
+              </span>
+              <span className="min-w-0">
+                <span className="block truncate text-[15px] text-foreground">{titleName ?? baseName}</span>
+                {current?.size && <span className="block text-xs text-muted-foreground">{current.size}</span>}
+              </span>
+            </div>
+          )}
           {series && (
             <ul className="mt-1">
               {keys.map((key, i) => {
                 const on = picked.has(key);
                 return (
                   <li key={key}>
-                    <Button type="button" onClick={() => toggle(key)} className="flex w-full items-center gap-3 py-3 text-left">
+                    <Button variant="ghost" type="button" onClick={() => toggle(key)} className="flex h-auto w-full items-center justify-start gap-3 px-0 py-3 text-left hover:bg-transparent">
                       <span className={`grid size-5 shrink-0 place-items-center rounded-full border ${on ? "border-app-accent bg-app-accent text-app-accent-foreground" : "border-muted-foreground"}`}>
                         {on && <Check className="size-3.5" strokeWidth={3} />}
                       </span>
-                      <span className="text-[15px] text-foreground">S{pad(pickSeason)} E{pad(i + 1)}</span>
+                      <span className="min-w-0">
+                        <span className="block text-[15px] text-foreground">S{pad(pickSeason)} E{pad(i + 1)}</span>
+                        {pickSeason === season && i + 1 === episode && current?.size && (
+                          <span className="block text-xs text-muted-foreground">{current.size}</span>
+                        )}
+                      </span>
                     </Button>
                   </li>
                 );
@@ -161,14 +216,14 @@ export function AppDownloadSheet({ onClose, sources, baseName, catalogId, season
 
         <div className="flex items-center gap-3 border-t border-border bg-background px-4 py-3 pb-[calc(0.75rem+env(safe-area-inset-bottom))]">
           {series && (
-            <Button type="button" onClick={toggleAll} className="flex shrink-0 items-center gap-2 text-sm text-foreground">
+            <Button variant="ghost" type="button" onClick={toggleAll} className="flex h-auto shrink-0 items-center gap-2 px-0 text-sm text-foreground hover:bg-transparent">
               <span className={`grid size-5 place-items-center rounded-full border ${allPicked ? "border-app-accent bg-app-accent text-app-accent-foreground" : "border-muted-foreground"}`}>
                 {allPicked && <Check className="size-3.5" strokeWidth={3} />}
               </span>
               Select All
             </Button>
           )}
-          <Button
+          <Button variant="ghost"
             type="button"
             disabled={busy}
             onClick={() => void start()}

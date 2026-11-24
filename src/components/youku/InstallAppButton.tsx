@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
-import { Download } from "lucide-react";
+import { Download, ExternalLink, Smartphone } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { getFbAuth } from "@/lib/firebase";
 import { buildOpenInAppUrl, isAndroidBrowser, isNativeApp } from "@/lib/native-app";
 
@@ -8,7 +9,7 @@ import { buildOpenInAppUrl, isAndroidBrowser, isNativeApp } from "@/lib/native-a
  * Android phones: open this same page in the Movie max app (signed in as the same
  * account), or download the app when it is not installed yet.
  */
-function openOrDownloadApp() {
+function openInApp() {
   let session: string | null = null;
   try {
     const user = getFbAuth().currentUser;
@@ -16,6 +17,40 @@ function openOrDownloadApp() {
   } catch { /* signed out */ }
   const apk = `${window.location.origin}/downloads/MovieMax.apk`;
   window.location.href = buildOpenInAppUrl(window.location.pathname + window.location.search, apk, session);
+}
+
+type AppVersion = { versionName?: string; notes?: string };
+
+/** Android: a real APK download (works in Chrome and in-app browsers), plus "open in app" for installed phones. */
+function AndroidAppDialog({ open, onOpenChange }: { open: boolean; onOpenChange: (open: boolean) => void }) {
+  const [info, setInfo] = useState<AppVersion | null>(null);
+  useEffect(() => {
+    if (!open || info) return;
+    fetch("/app-version.json", { cache: "no-store" }).then((r) => r.json()).then(setInfo).catch(() => setInfo({}));
+  }, [open, info]);
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="z-[200] max-w-sm rounded-2xl">
+        <DialogHeader>
+          <DialogTitle className="flex items-center gap-2"><Smartphone className="size-5 text-app-accent" />Movie max app</DialogTitle>
+          <DialogDescription>
+            Android app{info?.versionName ? ` · version ${info.versionName}` : ""}. Watch, download and get new movie alerts.
+          </DialogDescription>
+        </DialogHeader>
+        <Button asChild className="app-gradient h-12 gap-2 rounded-xl text-base font-bold text-app-accent-foreground">
+          <a href="/downloads/MovieMax.apk" download="MovieMax.apk" type="application/vnd.android.package-archive" onClick={() => setTimeout(() => onOpenChange(false), 400)}>
+            <Download className="size-5" />Download app
+          </a>
+        </Button>
+        <Button variant="secondary" onClick={openInApp} className="h-11 gap-2 rounded-xl">
+          <ExternalLink className="size-4" />Already installed? Open in app
+        </Button>
+        <p className="text-xs text-muted-foreground">
+          After downloading, open MovieMax.apk and tap Install. If asked, allow installing from this browser.
+        </p>
+      </DialogContent>
+    </Dialog>
+  );
 }
 
 type InstallPrompt = Event & {
@@ -27,6 +62,7 @@ export function InstallAppButton() {
   const [prompt, setPrompt] = useState<InstallPrompt | null>(null);
   const [installed, setInstalled] = useState(false);
   const [busy, setBusy] = useState(false);
+  const [androidOpen, setAndroidOpen] = useState(false);
   const [mode, setMode] = useState<"web" | "android" | "native">("web");
   useEffect(() => {
     setMode(isNativeApp() ? "native" : isAndroidBrowser() ? "android" : "web");
@@ -71,8 +107,9 @@ export function InstallAppButton() {
   if (mode === "native") return <Button size="sm" variant="secondary" aria-label="Check app updates" onClick={() => (window as unknown as { MovieMaxApp?: { checkUpdates?: () => void } }).MovieMaxApp?.checkUpdates?.()} className="h-9 shrink-0 gap-1 rounded-full bg-app-install px-2 text-[11px] font-bold text-app-install-foreground"><Download className="size-3.5" />App</Button>;
   if (mode === "android") {
     return (
-      <span className="shrink-0 rounded-full bg-app-install" title="Open in the Movie max app">
-        <Button size="sm" variant="secondary" onClick={openOrDownloadApp} aria-label="Open or download the Movie max app"
+      <span className="shrink-0 rounded-full bg-app-install" title="Download the Movie max app">
+        <AndroidAppDialog open={androidOpen} onOpenChange={setAndroidOpen} />
+        <Button size="sm" variant="secondary" onClick={() => setAndroidOpen(true)} aria-label="Download the Movie max app"
           className="h-9 w-auto gap-1 px-2 rounded-full bg-app-install font-bold uppercase tracking-normal text-app-install-foreground hover:bg-app-install/90 sm:h-8 sm:w-auto sm:px-3.5 sm:text-[12px] [&_svg]:size-5 sm:[&_svg]:size-3.5">
           <Download aria-hidden="true" strokeWidth={2} />
           <span className="inline">App</span>

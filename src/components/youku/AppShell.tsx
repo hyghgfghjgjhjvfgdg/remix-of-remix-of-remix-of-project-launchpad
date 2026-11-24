@@ -96,7 +96,7 @@ export function AppTopBar({ floatNav = false }: { floatNav?: boolean } = {}) {
             />
           ))}
         </nav>
-        <Button type="button" onClick={() => setGrid((v) => !v)} aria-label={grid ? "Close sections" : "All sections"} className="grid h-10 w-11 shrink-0 place-items-center bg-gradient-to-l from-background from-60% text-foreground/80">
+        <Button variant="ghost" type="button" onClick={() => setGrid((v) => !v)} aria-label={grid ? "Close sections" : "All sections"} className="grid h-10 w-11 shrink-0 place-items-center bg-gradient-to-l from-background from-60% text-foreground/80">
           {grid ? <X className="size-5" /> : <LayoutGrid className="size-5" />}
         </Button>
       </div>
@@ -104,7 +104,7 @@ export function AppTopBar({ floatNav = false }: { floatNav?: boolean } = {}) {
       {grid && (
         <div className="grid grid-cols-4 gap-2 border-t border-border bg-background px-3 pb-4 pt-3 shadow-2xl">
           {!floatNav && (
-            <Button
+            <Button variant="ghost"
               type="button"
               onClick={() => {
                 setGrid(false);

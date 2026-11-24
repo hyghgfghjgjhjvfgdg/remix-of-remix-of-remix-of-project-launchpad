@@ -160,7 +160,7 @@ function DownloadsPage() {
                   <div className="mt-2.5 flex gap-2">
                     {done ? (
                       <>
-                        <Button type="button" size="sm" onClick={() => bridge?.watch?.(d.id)} className="app-gradient h-8 flex-1 gap-1 rounded-md font-bold text-app-accent-foreground">
+                        <Button variant="ghost" type="button" size="sm" onClick={() => bridge?.watch?.(d.id)} className="app-gradient h-8 flex-1 gap-1 rounded-md font-bold text-app-accent-foreground">
                           <Play className="size-4" /> Watch
                         </Button>
                         <Button type="button" size="sm" variant="ghost" onClick={() => bridge?.exportFile?.(d.id)} className="h-8 flex-1 gap-1 rounded-md bg-background text-foreground hover:bg-background">
@@ -177,7 +177,7 @@ function DownloadsPage() {
                             <Pause className="size-4" /> Pause
                           </Button>
                         ) : (
-                          <Button type="button" size="sm" onClick={() => control("resume", d.id)} className="app-gradient h-8 flex-1 gap-1 rounded-md font-bold text-app-accent-foreground">
+                          <Button variant="ghost" type="button" size="sm" onClick={() => control("resume", d.id)} className="app-gradient h-8 flex-1 gap-1 rounded-md font-bold text-app-accent-foreground">
                             <RotateCw className="size-4" /> {d.status === "network" ? "Continue" : "Resume"}
                           </Button>
                         )}

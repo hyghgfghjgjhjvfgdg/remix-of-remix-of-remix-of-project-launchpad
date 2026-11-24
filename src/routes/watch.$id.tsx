@@ -285,7 +285,7 @@ function WatchPage() {
               {loadingStream ? (
                 <div className="aspect-video w-full animate-pulse rounded-[1.25rem] bg-muted" />
               ) : playSrc ? (
-                <div className="relative overflow-hidden border border-border bg-black">
+                <div data-watch-player className="sticky top-0 z-[60] -mx-3 overflow-hidden bg-black pt-[env(safe-area-inset-top)] sm:-mx-4 lg:relative lg:z-auto lg:mx-0 lg:border lg:border-border lg:pt-0">
                   {!canPlay && <SubscribeGate title={title.title} />}
                   <Player
                     src={canPlay ? playSrc : ""}
