@@ -9,6 +9,7 @@ import { Rail } from "@/components/youku/Rail";
 import { RowSkeleton } from "@/components/youku/Skeletons";
 import { VjRail } from "@/components/youku/VjRail";
 import { ReferralBanner } from "@/components/youku/ReferralBanner";
+import { InAppPromos } from "@/components/youku/InAppPromos";
 import { isAdultItem } from "@/lib/categories";
 import { LatestUploads } from "@/components/luo/LatestUploads";
 import { getHome } from "@/lib/catalog.functions";
@@ -291,8 +292,9 @@ function HomePage() {
               <RowSkeleton />
             </>
           )}
-          {rails.map((row) => (
+          {rails.map((row, i) => (
             <div key={row.title}>
+              {i === 1 && <InAppPromos />}
               <Rail title={row.title} items={row.items} {...(row.ranked ? { ranked: true } : {})} />
               {row.title === "Gangster" && !!comingSoon.length && (
                 <Rail title="Coming Soon" items={comingSoon} />

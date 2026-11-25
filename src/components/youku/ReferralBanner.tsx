@@ -6,6 +6,7 @@ import { WhatsAppIcon } from "@/components/icons/WhatsAppIcon";
 import { WHATSAPP_PROMPT_CLOSED_EVENT } from "@/components/youku/WhatsAppPrompt";
 import { Button } from "@/components/ui/button";
 import { referralLink, syncReferrals, type ReferralSummary } from "@/lib/referrals";
+import { isNativeApp } from "@/lib/native-app";
 import referralArtwork from "@/assets/referral-gold-artwork-natural.png";
 
 const CLOSED_KEY = "luofilm:referral-banner-closed";
@@ -39,6 +40,7 @@ export function ReferralBanner() {
       window.clearTimeout(timer);
       timer = window.setTimeout(() => {
         setReady(true);
+        if (isNativeApp()) return; // app: only the bottom Share button, never the big pop-up
         try {
           setExpanded(sessionStorage.getItem(CLOSED_KEY) !== "1");
         } catch {
@@ -114,7 +116,7 @@ export function ReferralBanner() {
     return (
       <Button
         type="button"
-        onClick={() => setExpanded(true)}
+        onClick={() => (isNativeApp() ? void share() : setExpanded(true))}
         className="fixed bottom-24 left-1/2 z-40 h-11 -translate-x-1/2 rounded-full bg-vip px-5 font-bold text-vip-foreground shadow-xl shadow-vip/25 transition hover:scale-105 hover:bg-vip lg:bottom-6 lg:left-[calc(50%+var(--sidebar-w)/2)]"
         aria-label="Share and get free access"
       >

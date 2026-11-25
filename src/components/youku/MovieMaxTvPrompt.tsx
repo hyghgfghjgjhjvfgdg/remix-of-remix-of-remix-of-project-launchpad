@@ -1,3 +1,4 @@
+import { isNativeApp } from "@/lib/native-app";
 import { useEffect, useState } from "react";
 import { Download, Play, X } from "lucide-react";
 import keyArt from "@/assets/moviemax-tv-key-art.jpg";
@@ -18,6 +19,7 @@ export function MovieMaxTvPrompt() {
   const [leaving, setLeaving] = useState(false);
 
   useEffect(() => {
+    if (isNativeApp()) return; // no app pop-up inside the Android app
     let timer: number | undefined;
     let tourActive = false;
     let shown = false;

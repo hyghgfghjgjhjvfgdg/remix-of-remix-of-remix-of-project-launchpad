@@ -5,6 +5,7 @@ import collageBg from "@/assets/whatsapp-movie-wall-clean.jpg";
 import movieMaxLogo from "@/assets/moviemax-logo.png";
 import { Button } from "@/components/ui/button";
 import { TOUR_STATE_EVENT } from "@/components/luo/DownloadTour";
+import { isNativeApp } from "@/lib/native-app";
 
 const CHANNEL_URL = "https://whatsapp.com/channel/0029VbEBSz6J3jv5PPsldQ3u";
 const SUPPORT_URL = "https://wa.me/256795592662";
@@ -19,6 +20,11 @@ export function WhatsAppPrompt() {
   const [leaving, setLeaving] = useState(false);
 
   useEffect(() => {
+    // The Android app shows an in-page WhatsApp card instead of this pop-up.
+    if (isNativeApp()) {
+      window.setTimeout(() => window.dispatchEvent(new Event(WHATSAPP_PROMPT_CLOSED_EVENT)), 0);
+      return;
+    }
     let joined = false;
     try {
       joined = localStorage.getItem(JOINED_KEY) === "1";
