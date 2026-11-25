@@ -9,7 +9,7 @@ import { CATEGORIES } from "@/lib/categories";
 import { FloatNav } from "./FloatNav";
 import { Button } from "@/components/ui/button";
 
-type PageTo = "/" | "/channels" | "/luo" | "/luganda" | "/teso" | "/music" | "/search" | "/developer";
+type PageTo = "/" | "/channels" | "/live-tv" | "/luo" | "/luganda" | "/teso" | "/music" | "/search" | "/developer";
 type Item = { label: string; page: PageTo; slug?: never } | { label: string; slug: string; page?: never };
 
 /** Tabs under the search bar, MovieBox style; the grid button shows every section. */
@@ -107,7 +107,7 @@ export function AppTopBar({ floatNav = false }: { floatNav?: boolean } = {}) {
 
       <div className="flex h-10 items-center">
         <nav className="flex min-w-0 flex-1 items-center gap-5 overflow-x-auto whitespace-nowrap px-3 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
-          <Link to="/channels" className="flex shrink-0 items-center gap-1 text-[15px] font-bold text-foreground/80">
+          <Link to={floatNav ? "/channels" : "/live-tv"} className="flex shrink-0 items-center gap-1 text-[15px] font-bold text-foreground/80">
             <Tv className="size-4" /> LIVE
           </Link>
           {TABS.map((item) => (
@@ -140,7 +140,7 @@ export function AppTopBar({ floatNav = false }: { floatNav?: boolean } = {}) {
           {GRID.map((item) => (
             <ItemLink
               key={item.label}
-              item={item}
+              item={!floatNav && item.page === "/channels" ? { label: item.label, page: "/live-tv" } : item}
               onClick={() => setGrid(false)}
               className={`flex h-10 items-center justify-center truncate rounded-lg px-1 text-[13px] font-semibold ${isActive(item) ? "bg-app-accent/20 text-sidebar-primary" : "bg-muted text-foreground/80"}`}
             />
@@ -179,9 +179,9 @@ export function AppBottomNav() {
         </Link>
         <div className="flex min-w-0 flex-1 justify-center">
           <Link
-            to="/channels"
+            to="/live-tv"
             aria-label="Live TV"
-            className={`-mt-6 grid size-[72px] shrink-0 place-items-center rounded-full border-4 border-background bg-card text-sidebar-primary ${pathname.startsWith("/channel") ? "ring-2 ring-sidebar-primary" : ""}`}
+            className={`-mt-6 grid size-[72px] shrink-0 place-items-center rounded-full border-4 border-background bg-card text-sidebar-primary ${pathname === "/live-tv" || pathname.startsWith("/channel") ? "ring-2 ring-sidebar-primary" : ""}`}
           >
             <span className="flex flex-col items-center text-[11px] font-bold leading-none">
               <Tv className="mb-1 size-7" />
