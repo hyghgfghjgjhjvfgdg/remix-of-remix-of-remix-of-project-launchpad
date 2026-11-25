@@ -58,6 +58,12 @@ function ItemLink({ item, className, onClick }: { item: Item; className: string;
 export function AppTopBar({ floatNav = false }: { floatNav?: boolean } = {}) {
   const isActive = useActive();
   const [grid, setGrid] = useState(false);
+  const navigate = useNavigate();
+  const searchStr = useRouterState({ select: (s) => s.location.searchStr });
+  const [term, setTerm] = useState("");
+  useEffect(() => {
+    setTerm(new URLSearchParams(searchStr).get("q") ?? "");
+  }, [searchStr]);
   const { openSubscribe } = useSubscription();
   useEffect(() => {
     const action = new URLSearchParams(window.location.search).get("appAction");
@@ -69,16 +75,32 @@ export function AppTopBar({ floatNav = false }: { floatNav?: boolean } = {}) {
       {floatNav ? (
         <FloatNav />
       ) : (
-        <div className="flex h-14 items-center gap-3 px-3">
+        <div className="flex h-14 items-center gap-2 px-3">
           <Link to="/" aria-label="Movie max home" className="shrink-0">
             <img src={logoSrc} alt="Movie max" className="h-9 w-auto max-w-[96px] object-contain" />
           </Link>
-          <Link
-            to="/search"
+          <form
+            role="search"
+            onSubmit={(event) => {
+              event.preventDefault();
+              const q = term.trim();
+              if (q) void navigate({ to: "/search", search: { q } });
+            }}
             className="flex h-10 min-w-0 flex-1 items-center gap-2 rounded-md bg-muted px-3 text-[15px] text-muted-foreground"
           >
-            <Search className="size-5 shrink-0" />
-            <span className="truncate">Search movies / series</span>
+            <Search className="size-5 shrink-0" aria-hidden="true" />
+            <input
+              type="search"
+              enterKeyHint="search"
+              aria-label="Search movies and series"
+              placeholder="Search movies / series"
+              value={term}
+              onChange={(event) => setTerm(event.target.value)}
+              className="min-w-0 w-full bg-transparent text-base text-foreground outline-none placeholder:text-muted-foreground"
+            />
+          </form>
+          <Link to="/profile" aria-label="Profile" title="Profile" className="grid size-10 shrink-0 place-items-center rounded-full bg-muted text-foreground transition-colors hover:bg-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">
+            <User className="size-5" />
           </Link>
         </div>
       )}

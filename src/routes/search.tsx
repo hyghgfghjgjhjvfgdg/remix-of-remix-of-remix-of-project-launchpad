@@ -9,6 +9,7 @@ import { TopBar } from "@/components/youku/TopBar";
 import { MobileNav } from "@/components/youku/MobileNav";
 import { MediaCard } from "@/components/youku/MediaCard";
 import { GridSkeleton } from "@/components/youku/Skeletons";
+import { useNativeApp } from "@/hooks/useNativeApp";
 import { searchAny } from "@/lib/catalog-client";
 import { restListTitles } from "@/lib/luo-rest";
 import type { CatalogItem } from "@/lib/moviebox";
@@ -36,6 +37,7 @@ export const Route = createFileRoute("/search")({
 
 function SearchPage() {
   const { q } = Route.useSearch();
+  const native = useNativeApp();
   const navigate = useNavigate();
   const [term, setTerm] = useState(q ?? "");
 
@@ -81,7 +83,7 @@ function SearchPage() {
 
   const query = useQuery({
     queryKey: ["search", q],
-    queryFn: () => searchAny(q!),
+    queryFn: () => searchAny(q ?? ""),
     enabled: Boolean(q),
     staleTime: 60 * 1000,
   });
@@ -96,12 +98,12 @@ function SearchPage() {
     <div className="min-h-screen bg-background">
       <Sidebar />
       <div className="lg:pl-[var(--sidebar-w)]">
-        <div className="relative h-[56px] lg:h-14">
+        <div className="relative h-[96px] lg:h-14">
           <TopBar />
         </div>
 
         <main className="px-3 pb-28 sm:px-4 lg:px-2 lg:pb-16">
-          <form
+          {!native && <form
             onSubmit={submit}
             className="mt-4 flex h-14 items-center gap-3 rounded-2xl bg-foreground/10 px-4 ring-1 ring-border backdrop-blur-md lg:hidden"
           >
@@ -113,7 +115,7 @@ function SearchPage() {
               onChange={(e) => setTerm(e.target.value)}
               className="w-full bg-transparent text-base text-foreground outline-none placeholder:text-foreground/50"
             />
-          </form>
+          </form>}
 
           <h1 className="mt-4 text-2xl font-black tracking-tight text-foreground">
             {q ? `Results for "${q}"` : "Search the catalog"}
