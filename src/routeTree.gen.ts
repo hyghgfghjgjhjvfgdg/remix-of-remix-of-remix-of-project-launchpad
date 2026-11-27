@@ -57,6 +57,7 @@ import { Route as ApiPublicStreamRouteImport } from './routes/api/public/stream'
 import { Route as ApiPublicSubtitleRouteImport } from './routes/api/public/subtitle'
 import { Route as PProviderIndexRouteImport } from './routes/p.$provider.index'
 import { Route as PProviderIdRouteImport } from './routes/p.$provider.$id'
+import { Route as ApiPublicDesktopSplatRouteImport } from './routes/api/public/desktop.$'
 import { Route as ApiPublicV1SplatRouteImport } from './routes/api/public/v1/$'
 import { Route as LugandaNaraboxKindIdRouteImport } from './routes/luganda.narabox.$kind.$id'
 
@@ -301,6 +302,11 @@ const PProviderIdRoute = PProviderIdRouteImport.update({
   path: '/p/$provider/$id',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiPublicDesktopSplatRoute = ApiPublicDesktopSplatRouteImport.update({
+  id: '/api/public/desktop/$',
+  path: '/api/public/desktop/$',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ApiPublicV1SplatRoute = ApiPublicV1SplatRouteImport.update({
   id: '/api/public/v1/$',
   path: '/api/public/v1/$',
@@ -361,6 +367,7 @@ export interface FileRoutesByFullPath {
   '/api/public/subtitle': typeof ApiPublicSubtitleRoute
   '/p/$provider/$id': typeof PProviderIdRoute
   '/p/$provider/': typeof PProviderIndexRoute
+  '/api/public/desktop/$': typeof ApiPublicDesktopSplatRoute
   '/api/public/v1/$': typeof ApiPublicV1SplatRoute
   '/luganda/narabox/$kind/$id': typeof LugandaNaraboxKindIdRoute
 }
@@ -412,6 +419,7 @@ export interface FileRoutesByTo {
   '/api/public/subtitle': typeof ApiPublicSubtitleRoute
   '/p/$provider/$id': typeof PProviderIdRoute
   '/p/$provider': typeof PProviderIndexRoute
+  '/api/public/desktop/$': typeof ApiPublicDesktopSplatRoute
   '/api/public/v1/$': typeof ApiPublicV1SplatRoute
   '/luganda/narabox/$kind/$id': typeof LugandaNaraboxKindIdRoute
 }
@@ -465,6 +473,7 @@ export interface FileRoutesById {
   '/api/public/subtitle': typeof ApiPublicSubtitleRoute
   '/p/$provider/$id': typeof PProviderIdRoute
   '/p/$provider/': typeof PProviderIndexRoute
+  '/api/public/desktop/$': typeof ApiPublicDesktopSplatRoute
   '/api/public/v1/$': typeof ApiPublicV1SplatRoute
   '/luganda/narabox/$kind/$id': typeof LugandaNaraboxKindIdRoute
 }
@@ -519,6 +528,7 @@ export interface FileRouteTypes {
     | '/api/public/subtitle'
     | '/p/$provider/$id'
     | '/p/$provider/'
+    | '/api/public/desktop/$'
     | '/api/public/v1/$'
     | '/luganda/narabox/$kind/$id'
   fileRoutesByTo: FileRoutesByTo
@@ -570,6 +580,7 @@ export interface FileRouteTypes {
     | '/api/public/subtitle'
     | '/p/$provider/$id'
     | '/p/$provider'
+    | '/api/public/desktop/$'
     | '/api/public/v1/$'
     | '/luganda/narabox/$kind/$id'
   id:
@@ -622,6 +633,7 @@ export interface FileRouteTypes {
     | '/api/public/subtitle'
     | '/p/$provider/$id'
     | '/p/$provider/'
+    | '/api/public/desktop/$'
     | '/api/public/v1/$'
     | '/luganda/narabox/$kind/$id'
   fileRoutesById: FileRoutesById
@@ -673,6 +685,7 @@ export interface RootRouteChildren {
   ApiPublicSubtitleRoute: typeof ApiPublicSubtitleRoute
   PProviderIdRoute: typeof PProviderIdRoute
   PProviderIndexRoute: typeof PProviderIndexRoute
+  ApiPublicDesktopSplatRoute: typeof ApiPublicDesktopSplatRoute
   ApiPublicV1SplatRoute: typeof ApiPublicV1SplatRoute
   LugandaNaraboxKindIdRoute: typeof LugandaNaraboxKindIdRoute
 }
@@ -1015,6 +1028,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof PProviderIdRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/public/desktop/$': {
+      id: '/api/public/desktop/$'
+      path: '/api/public/desktop/$'
+      fullPath: '/api/public/desktop/$'
+      preLoaderRoute: typeof ApiPublicDesktopSplatRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/public/v1/$': {
       id: '/api/public/v1/$'
       path: '/api/public/v1/$'
@@ -1091,6 +1111,7 @@ const rootRouteChildren: RootRouteChildren = {
   ApiPublicSubtitleRoute: ApiPublicSubtitleRoute,
   PProviderIdRoute: PProviderIdRoute,
   PProviderIndexRoute: PProviderIndexRoute,
+  ApiPublicDesktopSplatRoute: ApiPublicDesktopSplatRoute,
   ApiPublicV1SplatRoute: ApiPublicV1SplatRoute,
   LugandaNaraboxKindIdRoute: LugandaNaraboxKindIdRoute,
 }
