@@ -1,0 +1,25 @@
+<!doctype html><html><head><meta charset="utf-8"><title>Movie max</title>
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; img-src * data:; frame-src https:; style-src 'self' 'unsafe-inline'">
+<link rel="stylesheet" href="style.css"></head><body>
+<div class="app">
+<aside class="side">
+  <div class="brand"><img src="logo.png" alt=""><div><b>Movie max</b><small>Desktop</small></div></div>
+  <nav id="nav">
+    <button data-v="home" class="on"><i>⌂</i>Home</button>
+    <button data-v="movie"><i>▶</i>Movies</button>
+    <button data-v="series"><i>▤</i>Series</button>
+    <button data-v="luganda"><i>★</i>Luganda<em></em></button>
+    <button data-v="tv"><i>◉</i>Live TV<em></em></button>
+  </nav>
+  <div class="me" id="me"><span class="av"></span><div><b>Click to log in</b><small>Plans &amp; subscription</small></div></div>
+</aside>
+<main>
+  <header class="top">
+    <div class="search"><span>⌕</span><input id="q" placeholder="Search movies, series, Luganda…"></div>
+    <div class="status" id="status"></div>
+    <div class="wc"><button data-w="min">—</button><button data-w="max">▢</button><button data-w="close" class="x">✕</button></div>
+  </header>
+  <section id="view" class="view"></section>
+</main>
+</div>
+<script src="app.js"></script></body></html>
