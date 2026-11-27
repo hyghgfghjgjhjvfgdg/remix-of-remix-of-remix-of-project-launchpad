@@ -1,7 +1,7 @@
 {
-  "versionCode": 4,
-  "versionName": "1.0.3",
+  "versionCode": 5,
+  "versionName": "1.0.4",
   "apkUrl": "/downloads/MovieMax.apk",
-  "notes": "Multiple downloads at once, fixed export, Downloads page with the same bottom bar, Add widget and Movie alerts buttons, loading splash until the site is ready, player stays on top with the download panel under it.",
+  "notes": "Opens with the app's own loading screen, opens instantly from saved movies and pictures, MovieMax TV full screen.",
   "force": false
 }

@@ -102,7 +102,12 @@ public class MainActivity extends Activity {
         String firstSite = Util.site(this);
         if (start != null) web.loadUrl(start);
         else if (b != null) { web.restoreState(b); hideSplash(); }
-        else web.loadUrl(firstSite);
+        else {
+            // Open instantly from saved pages/images, then refresh when the network answers.
+            web.getSettings().setCacheMode(WebSettings.LOAD_CACHE_ELSE_NETWORK);
+            web.loadUrl(firstSite);
+            if (Util.online(this)) ui.postDelayed(() -> web.getSettings().setCacheMode(WebSettings.LOAD_DEFAULT), 4000);
+        }
         LatestJob.schedule(this);
         LatestJob.checkNow(this);
         // Pick up a domain change; if the website moved, open the new address.
@@ -158,7 +163,53 @@ public class MainActivity extends Activity {
                 .setInterpolator(new android.view.animation.OvershootInterpolator(1.6f)).start();
         name.setAlpha(0f); name.setTranslationY(Util.dp(this, 16));
         name.animate().alpha(1f).translationY(0).setStartDelay(300).setDuration(420).start();
+        // After the logo, the app shows its own loading skeleton (never the half-drawn website).
+        final View sk = buildSkeleton();
+        sk.setAlpha(0f);
+        f.addView(sk, new FrameLayout.LayoutParams(-1, -1));
+        ui.postDelayed(() -> { if (!splashGone) { col.animate().alpha(0f).setDuration(220).start(); sk.animate().alpha(1f).setDuration(260).start(); } }, 1100);
         return f;
+    }
+
+    private View block(int w, int h, int r) {
+        View v = new View(this);
+        android.graphics.drawable.GradientDrawable g = new android.graphics.drawable.GradientDrawable();
+        g.setColor(0xFF1E2230); g.setCornerRadius(Util.dp(this, r)); v.setBackground(g);
+        android.animation.ObjectAnimator a = android.animation.ObjectAnimator.ofFloat(v, "alpha", 1f, 0.45f);
+        a.setDuration(800); a.setRepeatMode(android.animation.ValueAnimator.REVERSE); a.setRepeatCount(-1); a.start();
+        v.setLayoutParams(new LinearLayout.LayoutParams(w < 0 ? w : Util.dp(this, w), Util.dp(this, h)));
+        return v;
+    }
+
+    /** Native skeleton matching the app layout: header, tabs, banner, poster rows, bottom bar. */
+    private View buildSkeleton() {
+        FrameLayout wrap = new FrameLayout(this);
+        wrap.setBackgroundColor(getColor(R.color.bg));
+        LinearLayout c = new LinearLayout(this);
+        c.setOrientation(LinearLayout.VERTICAL);
+        int pad = Util.dp(this, 12);
+        c.setPadding(pad, pad, pad, pad);
+        LinearLayout head = new LinearLayout(this); head.setGravity(Gravity.CENTER_VERTICAL);
+        head.addView(block(80, 26, 6));
+        View search = block(-1, 34, 17); LinearLayout.LayoutParams sl = new LinearLayout.LayoutParams(0, Util.dp(this, 34), 1f); sl.setMargins(pad, 0, pad, 0); search.setLayoutParams(sl); head.addView(search);
+        head.addView(block(32, 32, 16));
+        c.addView(head);
+        LinearLayout tabs = new LinearLayout(this); tabs.setPadding(0, pad, 0, pad);
+        for (int i = 0; i < 6; i++) { View t = block(52, 14, 7); ((LinearLayout.LayoutParams) t.getLayoutParams()).rightMargin = Util.dp(this, 10); tabs.addView(t); }
+        c.addView(tabs);
+        c.addView(block(-1, 170, 10));
+        for (int r = 0; r < 2; r++) {
+            View title = block(120, 16, 6); ((LinearLayout.LayoutParams) title.getLayoutParams()).setMargins(0, pad + pad / 2, 0, pad / 2); c.addView(title);
+            LinearLayout row = new LinearLayout(this);
+            for (int i = 0; i < 4; i++) { View p = block(0, 150, 8); LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(0, Util.dp(this, 150), 1f); lp.rightMargin = i < 3 ? Util.dp(this, 8) : 0; p.setLayoutParams(lp); row.addView(p); }
+            c.addView(row);
+        }
+        wrap.addView(c, new FrameLayout.LayoutParams(-1, -1));
+        LinearLayout nav = new LinearLayout(this); nav.setGravity(Gravity.CENTER); nav.setBackgroundColor(0xFF12141C);
+        nav.setPadding(pad, Util.dp(this, 10), pad, Util.dp(this, 10));
+        for (int i = 0; i < 5; i++) { View d = block(26, 26, 13); LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(0, Util.dp(this, 26), 1f); lp.setMargins(Util.dp(this, 18), 0, Util.dp(this, 18), 0); d.setLayoutParams(lp); nav.addView(d); }
+        wrap.addView(nav, new FrameLayout.LayoutParams(-1, -2, Gravity.BOTTOM));
+        return wrap;
     }
 
     private void splashProgress(int pct) {
@@ -171,7 +222,7 @@ public class MainActivity extends Activity {
     /** Fades the splash out once the page is ready (at least 1.2 s so the animation is seen). */
     private void hideSplash() {
         if (splashGone) return;
-        long wait = Math.max(0, 1200 - (System.currentTimeMillis() - splashStart));
+        long wait = Math.max(0, 1800 - (System.currentTimeMillis() - splashStart));
         ui.postDelayed(() -> {
             if (splashGone) return;
             splashGone = true;
@@ -436,7 +487,7 @@ public class MainActivity extends Activity {
             if (!mainFailed) errorView.setVisibility(View.GONE);
             CookieManager.getInstance().flush();
             // Give the page a moment to draw its movies before the splash fades.
-            ui.postDelayed(MainActivity.this::hideSplash, 500);
+            ui.postDelayed(MainActivity.this::hideSplash, 1200);
         }
 
         @Override

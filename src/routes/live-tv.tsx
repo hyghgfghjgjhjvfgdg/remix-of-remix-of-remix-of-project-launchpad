@@ -1,8 +1,9 @@
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { ArrowLeft, RotateCw, Tv } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { MobileNav } from "@/components/youku/MobileNav";
+import { isNativeApp } from "@/lib/native-app";
 
 export const Route = createFileRoute("/live-tv")({
   head: () => ({
@@ -22,6 +23,17 @@ function LiveTvPage() {
   const [revision, setRevision] = useState(0);
   const [loading, setLoading] = useState(true);
   const frame = useRef<HTMLIFrameElement>(null);
+  const [native, setNative] = useState(false);
+  useEffect(() => setNative(isNativeApp()), []);
+
+  if (native) {
+    // In the phone app MovieMax TV fills the whole screen; the phone's back button leaves it.
+    return (
+      <div className="fixed inset-0 z-[300] bg-background">
+        <iframe title="MovieMax TV" src="https://livetv.luofilm.site/" allow="autoplay; fullscreen; picture-in-picture; encrypted-media" allowFullScreen className="block size-full border-0 bg-background" />
+      </div>
+    );
+  }
 
   return (
     <div className="flex h-dvh flex-col overflow-hidden bg-background text-foreground pt-[env(safe-area-inset-top)] pb-[calc(88px+env(safe-area-inset-bottom))] lg:pb-0">

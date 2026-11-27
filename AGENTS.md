@@ -71,3 +71,4 @@ use the editor.
 - Admin Insights, Members and Reports reuse the cached `admin-overview` load (`loadOverview`); their pure maths lives in `src/lib/admin-insights.ts` with tests. Why: extra Firestore reads burn the free daily quota.
 - Whop payments are confirmed in the background on every page (`CardPaymentWatcher`) and redirect to the buyer's origin. Why: closed windows and Google/Apple returns must still activate.
 - Android app: see `mobile-app/AGENTS.md`.
+- Desktop app: see `electron/AGENTS.md`.

@@ -58,14 +58,23 @@ type InstallPrompt = Event & {
   userChoice: Promise<{ outcome: "accepted" | "dismissed" }>;
 };
 
+import desktopZip from "@/assets/MovieMax-Desktop-Windows.zip.asset.json";
+
+function desktopMode(): "windows" | "electron" | null {
+  const ua = navigator.userAgent;
+  if (/Electron/i.test(ua)) return "electron";
+  return /Windows NT/i.test(ua) && !/Mobile|Android/i.test(ua) ? "windows" : null;
+}
+
 export function InstallAppButton() {
   const [prompt, setPrompt] = useState<InstallPrompt | null>(null);
   const [installed, setInstalled] = useState(false);
   const [busy, setBusy] = useState(false);
   const [androidOpen, setAndroidOpen] = useState(false);
-  const [mode, setMode] = useState<"web" | "android" | "native">("web");
+  const [mode, setMode] = useState<"web" | "android" | "native" | "desktop" | "electron">("web");
   useEffect(() => {
-    setMode(isNativeApp() ? "native" : isAndroidBrowser() ? "android" : "web");
+    const desk = desktopMode();
+    setMode(isNativeApp() ? "native" : isAndroidBrowser() ? "android" : desk === "electron" ? "electron" : desk === "windows" ? "desktop" : "web");
   }, []);
   useEffect(() => {
     const standalone = window.matchMedia("(display-mode: standalone)");
@@ -105,6 +114,20 @@ export function InstallAppButton() {
     } finally { setPrompt(null); setBusy(false); }
   };
   if (mode === "native") return <Button size="sm" variant="secondary" aria-label="Check app updates" onClick={() => (window as unknown as { MovieMaxApp?: { checkUpdates?: () => void } }).MovieMaxApp?.checkUpdates?.()} className="h-9 shrink-0 gap-1 rounded-full bg-app-install px-2 text-[11px] font-bold text-app-install-foreground"><Download className="size-3.5" />App</Button>;
+  if (mode === "electron") return null;
+  if (mode === "desktop") {
+    // Real installable Windows desktop app (unzip, then open "Movie max.exe").
+    return (
+      <span className="shrink-0 rounded-full bg-app-install" title="Install the Movie max desktop app for Windows">
+        <Button asChild size="sm" variant="secondary" className="h-9 w-auto gap-1 px-2 rounded-full bg-app-install font-bold uppercase tracking-normal text-app-install-foreground hover:bg-app-install/90 sm:h-8 sm:px-3.5 sm:text-[12px] [&_svg]:size-5 sm:[&_svg]:size-3.5">
+          <a href={desktopZip.url} download="MovieMax-Desktop-Windows.zip" aria-label="Install the Movie max desktop app">
+            <Download aria-hidden="true" strokeWidth={2} />
+            <span className="inline">Install</span>
+          </a>
+        </Button>
+      </span>
+    );
+  }
   if (mode === "android") {
     return (
       <span className="shrink-0 rounded-full bg-app-install" title="Download the Movie max app">

@@ -1,0 +1,1 @@
+- `electron/` loads the Firebase active site; packaged for Windows with @electron/packager; the zip is a Lovable asset pointer (>10 MB) used by the desktop Install button. Why: real installable desktop app, not PWA.
